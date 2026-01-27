@@ -296,18 +296,20 @@ fn calendar_to_tdb(
 
     let d = day as f64;
 
-    // Julian Day Number
+    // Julian Day Number (integer-day part at noon)
     let a = (y / 100.0).floor();
     let b = 2.0 - a + (a / 4.0).floor();
 
     let jd = (365.25 * (y + 4716.0)).floor() + (30.6001 * (m + 1.0)).floor() + d + b - 1524.5;
 
-    // Add time of day
+    // Sub-day fraction from time components
     let day_fraction = (hour as f64) / 24.0 + (minute as f64) / 1440.0 + second / 86400.0;
-    let jd_full = jd + day_fraction;
 
-    // Convert to TDB seconds past J2000
-    let tdb = (jd_full - J2000_JD) * SECONDS_PER_DAY;
+    // Convert to TDB seconds past J2000.
+    // Keep integer-day offset and sub-day fraction separate to avoid
+    // catastrophic cancellation when subtracting two large JD values.
+    let days_offset = jd - J2000_JD;
+    let tdb = days_offset * SECONDS_PER_DAY + day_fraction * SECONDS_PER_DAY;
     Ok(EpochTDB(tdb))
 }
 
@@ -417,7 +419,7 @@ pub fn format_calendar(tdb: f64) -> String {
 mod tests {
     use super::*;
 
-    const EPSILON: f64 = 1.0; // 1 second tolerance for simplified algorithm
+    const EPSILON: f64 = 1e-6; // microsecond tolerance
 
     #[test]
     fn test_parse_j2000_iso() {

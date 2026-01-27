@@ -1,6 +1,5 @@
 //! Error types for DAF file parsing.
 
-
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     /// I/O error from file operations.
@@ -47,7 +46,6 @@ pub enum Error {
     Format(String),
 
     // ========== SPICE API Errors ==========
-
     /// Cannot parse time string.
     #[error("Cannot parse time string: '{input}'")]
     TimeParseError { input: String },
