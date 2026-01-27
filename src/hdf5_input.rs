@@ -1,6 +1,6 @@
 //! HDF5 input module for reading DAF and PCK data from HDF5 format.
 
-use crate::hdf5_output::DAFSource;
+use crate::daf_source::DAFSource;
 use crate::prelude::*;
 use crate::text_pck::{KernelValue, PCKBlock, PCKSource, PCKVariable};
 use crate::{BPCKSegment, CKSegment, DAFHeader, DAFMetadata, DAFSegment, Endian, SPKSegment};

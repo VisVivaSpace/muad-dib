@@ -1,6 +1,6 @@
 //! SPK writer module for reconstructing DAF/SPK files from parsed data.
 
-use crate::hdf5_output::DAFSource;
+use crate::daf_source::DAFSource;
 use crate::prelude::*;
 use crate::{DAFMetadata, DAFSegment, Endian};
 use std::io::{BufWriter, Write};

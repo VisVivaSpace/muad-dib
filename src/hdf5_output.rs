@@ -1,22 +1,13 @@
 //! HDF5 output module for writing DAF and PCK data to HDF5 format.
 
+pub use crate::daf_source::DAFSource;
 use crate::prelude::*;
 use crate::text_pck::{KernelValue, PCKBlock, PCKSource, PCKVariable};
-use crate::{BPCKSegment, CKSegment, DAFHeader, DAFMetadata, DAFSegment, SPKSegment};
+use crate::{BPCKSegment, CKSegment, DAFSegment, SPKSegment};
 use hdf5::types::VarLenUnicode;
 use hdf5::File as H5File;
 use ndarray::Array1;
-use serde::{Deserialize, Serialize};
 use std::str::FromStr;
-
-/// A source file with its header, metadata, and parsed segments.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DAFSource {
-    pub filename: String,
-    pub header: DAFHeader,
-    pub metadata: DAFMetadata,
-    pub segments: Vec<DAFSegment>,
-}
 
 /// Write multiple DAF sources to a single HDF5 file.
 pub fn write_hdf5(path: &std::path::Path, sources: Vec<DAFSource>) -> Result<()> {

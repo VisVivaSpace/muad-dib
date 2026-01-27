@@ -92,7 +92,7 @@ pub use spk_types::{
 };
 
 use crate::brief::CoverageInterval;
-use crate::hdf5_output::DAFSource;
+use crate::daf_source::DAFSource;
 use crate::prelude::*;
 use crate::text_pck::{PCKSource, PCKVariable};
 use crate::types::NaifId;

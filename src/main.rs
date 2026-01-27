@@ -3,12 +3,15 @@ use std::fs::File;
 use std::path::PathBuf;
 
 use muad_dib::{
+    daf_source::DAFSource,
     formats::{available_formats, get_format},
-    hdf5_output::{write_pck_sources, DAFSource},
     kernel::{DAFSourceExt, SpiceKernel},
     text_pck::PCKSource,
     DAFFile, DAFSegment,
 };
+
+#[cfg(feature = "hdf5")]
+use muad_dib::hdf5_output::write_pck_sources;
 
 fn main() {
     let input_files = Arg::new("input")
@@ -21,14 +24,14 @@ fn main() {
         .value_parser(value_parser!(PathBuf))
         .long("output")
         .short('o')
-        .help("Output file (default: <first-input>.<format>)");
+        .required(true)
+        .help("Output file (format inferred from extension: .parquet, .arrow, .msgpack, .bson, .hdf5)");
 
     let format_arg = Arg::new("format")
         .long("format")
         .short('f')
         .value_parser(available_formats())
-        .default_value("hdf5")
-        .help("Output format: hdf5, msgpack, bson");
+        .help("Output format override (default: inferred from output extension)");
 
     let info_flag = Arg::new("info")
         .long("info")
@@ -58,24 +61,52 @@ fn main() {
         return;
     }
 
-    // Get format
-    let format_name = matches.get_one::<String>("format").unwrap();
-    let format = match get_format(format_name) {
+    // Determine output path (required)
+    let output_path = matches
+        .get_one::<PathBuf>("output")
+        .expect("Output file is required")
+        .clone();
+
+    // Determine format: explicit --format flag, or infer from output extension
+    let format_name: String = if let Some(name) = matches.get_one::<String>("format") {
+        name.clone()
+    } else {
+        // Infer from output extension
+        let ext = output_path
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+        match ext.as_str() {
+            "hdf5" | "h5" => "hdf5".to_string(),
+            "parquet" | "pq" => "parquet".to_string(),
+            "arrow" | "feather" => "arrow".to_string(),
+            "msgpack" | "mp" => "msgpack".to_string(),
+            "bson" => "bson".to_string(),
+            _ => {
+                eprintln!(
+                    "Error: cannot infer format from extension '.{}'. Use --format to specify.",
+                    ext
+                );
+                eprintln!("Supported extensions: .hdf5, .h5, .parquet, .pq, .arrow, .feather, .msgpack, .mp, .bson");
+                std::process::exit(1);
+            }
+        }
+    };
+
+    // Check HDF5 availability
+    #[cfg(not(feature = "hdf5"))]
+    if format_name == "hdf5" {
+        eprintln!("Error: HDF5 support not enabled. Rebuild with: cargo build --features hdf5");
+        std::process::exit(1);
+    }
+
+    let format = match get_format(&format_name) {
         Some(f) => f,
         None => {
             eprintln!("Error: unknown format '{}'", format_name);
             eprintln!("Available formats: {}", available_formats().join(", "));
             std::process::exit(1);
-        }
-    };
-
-    // Determine output file path
-    let output_path = match matches.get_one::<PathBuf>("output") {
-        Some(p) => p.clone(),
-        None => {
-            // Default: first input file with format extension
-            let first = input_paths[0];
-            first.with_extension(format.extension())
         }
     };
 
@@ -192,6 +223,7 @@ fn main() {
     }
 
     // Write PCK sources to HDF5 (append to existing file if DAF sources were written)
+    #[cfg(feature = "hdf5")]
     if !pck_sources.is_empty() {
         // Open the HDF5 file that was created above (or create new if no DAF sources)
         let h5_file = if daf_sources.is_empty() {
@@ -228,6 +260,13 @@ fn main() {
             );
             std::process::exit(1);
         }
+    }
+
+    #[cfg(not(feature = "hdf5"))]
+    if !pck_sources.is_empty() {
+        eprintln!(
+            "Warning: PCK writing requires HDF5 support. Rebuild with: cargo build --features hdf5"
+        );
     }
 
     // Print summary

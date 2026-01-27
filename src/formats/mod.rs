@@ -22,12 +22,14 @@
 
 pub mod arrow;
 pub mod bson;
+#[cfg(feature = "hdf5")]
 pub mod hdf5;
 pub mod msgpack;
 pub mod parquet;
 
+use crate::daf_source::DAFSource;
+#[cfg(feature = "hdf5")]
 use crate::hdf5_input::read_hdf5;
-use crate::hdf5_output::DAFSource;
 use crate::prelude::*;
 use std::path::Path;
 
@@ -46,6 +48,7 @@ pub trait OutputFormat {
 /// Get an output format by name.
 pub fn get_format(name: &str) -> Option<Box<dyn OutputFormat>> {
     match name.to_lowercase().as_str() {
+        #[cfg(feature = "hdf5")]
         "hdf5" | "h5" => Some(Box::new(hdf5::Hdf5Format)),
         "msgpack" | "mp" => Some(Box::new(msgpack::MsgPackFormat)),
         "bson" => Some(Box::new(bson::BsonFormat)),
@@ -55,19 +58,18 @@ pub fn get_format(name: &str) -> Option<Box<dyn OutputFormat>> {
     }
 }
 
-/// Get the default output format.
-pub fn default_format() -> Box<dyn OutputFormat> {
-    Box::new(hdf5::Hdf5Format)
-}
-
 /// Get all available format names.
 pub fn available_formats() -> Vec<&'static str> {
-    vec!["hdf5", "parquet", "arrow", "msgpack", "bson"]
+    #[cfg(feature = "hdf5")]
+    let formats = vec!["hdf5", "parquet", "arrow", "msgpack", "bson"];
+    #[cfg(not(feature = "hdf5"))]
+    let formats = vec!["parquet", "arrow", "msgpack", "bson"];
+    formats
 }
 
 /// Read DAF sources from any supported serialized format (auto-detected by extension).
 ///
-/// Supports: HDF5, Parquet, Arrow, MessagePack, BSON
+/// Supports: HDF5 (with feature), Parquet, Arrow, MessagePack, BSON
 ///
 /// # Example
 ///
@@ -75,7 +77,7 @@ pub fn available_formats() -> Vec<&'static str> {
 /// use muad_dib::formats::read_sources;
 /// use std::path::Path;
 ///
-/// let sources = read_sources(Path::new("data.hdf5")).unwrap();
+/// let sources = read_sources(Path::new("data.parquet")).unwrap();
 /// for source in &sources {
 ///     println!("File: {} ({} segments)", source.filename, source.segments.len());
 /// }
@@ -88,15 +90,25 @@ pub fn read_sources(path: &Path) -> Result<Vec<DAFSource>> {
         .to_lowercase();
 
     match ext.as_str() {
+        #[cfg(feature = "hdf5")]
         "hdf5" | "h5" => read_hdf5(path),
+        #[cfg(not(feature = "hdf5"))]
+        "hdf5" | "h5" => Err(crate::error::Error::Format(
+            "HDF5 support not enabled. Rebuild with: cargo build --features hdf5".to_string(),
+        )),
         "parquet" | "pq" => parquet::read_parquet(path),
         "arrow" | "feather" => arrow::read_arrow(path),
         "msgpack" | "mp" => msgpack::read_msgpack(path),
         "bson" => bson::read_bson(path),
         _ => Err(crate::error::Error::UnknownFormat {
             format: format!(
-                "file format '{}'. Supported: hdf5, parquet, arrow, msgpack, bson",
-                ext
+                "file format '{}'. Supported: {}, parquet, arrow, msgpack, bson",
+                ext,
+                if cfg!(feature = "hdf5") {
+                    "hdf5"
+                } else {
+                    "hdf5 (disabled)"
+                }
             ),
         }),
     }

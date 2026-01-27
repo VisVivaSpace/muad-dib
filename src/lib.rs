@@ -66,9 +66,12 @@
 use crate::prelude::*;
 
 pub mod brief;
+pub mod daf_source;
 pub mod error;
 pub mod formats;
+#[cfg(feature = "hdf5")]
 pub mod hdf5_input;
+#[cfg(feature = "hdf5")]
 pub mod hdf5_output;
 pub mod inspector;
 pub mod kernel;

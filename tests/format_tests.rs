@@ -5,12 +5,12 @@
 
 #![cfg(feature = "test-data")]
 
+use muad_dib::daf_source::DAFSource;
 use muad_dib::formats::arrow::read_arrow;
 use muad_dib::formats::bson::read_bson;
 use muad_dib::formats::get_format;
 use muad_dib::formats::msgpack::read_msgpack;
 use muad_dib::formats::parquet::read_parquet;
-use muad_dib::hdf5_output::DAFSource;
 use muad_dib::{DAFFile, DAFSegment};
 use std::fs::File;
 

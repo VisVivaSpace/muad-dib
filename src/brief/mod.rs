@@ -10,13 +10,14 @@ pub mod display;
 pub mod names;
 pub mod time;
 
+use crate::daf_source::DAFSource;
 use crate::error::Error;
 use crate::formats::arrow::read_arrow;
 use crate::formats::bson::read_bson;
 use crate::formats::msgpack::read_msgpack;
 use crate::formats::parquet::read_parquet;
+#[cfg(feature = "hdf5")]
 use crate::hdf5_input::read_hdf5;
-use crate::hdf5_output::DAFSource;
 use crate::{DAFFile, DAFSegment};
 use std::collections::HashMap;
 use std::fs::File;
@@ -151,7 +152,12 @@ pub fn collect_summaries(path: &Path) -> Result<Vec<FileSummary>, Error> {
         "bc" | "ck" => collect_from_daf(path),
         "bpc" | "bpck" => collect_from_daf(path),
         // Serialized formats
+        #[cfg(feature = "hdf5")]
         "hdf5" | "h5" => collect_from_serialized(path, read_hdf5),
+        #[cfg(not(feature = "hdf5"))]
+        "hdf5" | "h5" => Err(Error::Format(
+            "HDF5 support not enabled. Rebuild with: cargo build --features hdf5".to_string(),
+        )),
         "parquet" | "pq" => collect_from_serialized(path, read_parquet),
         "arrow" | "feather" => collect_from_serialized(path, read_arrow),
         "msgpack" | "mp" => collect_from_serialized(path, read_msgpack),

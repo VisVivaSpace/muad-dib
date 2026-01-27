@@ -1,14 +1,17 @@
-//! Round-trip tests for SPK -> HDF5 -> SPK conversion.
+//! Round-trip tests for SPK -> format -> SPK conversion.
 
 #![cfg(feature = "test-data")]
 
+use muad_dib::daf_source::DAFSource;
 use muad_dib::formats::arrow::read_arrow;
 use muad_dib::formats::bson::read_bson;
 use muad_dib::formats::get_format;
 use muad_dib::formats::msgpack::read_msgpack;
 use muad_dib::formats::parquet::read_parquet;
+#[cfg(feature = "hdf5")]
 use muad_dib::hdf5_input::read_hdf5;
-use muad_dib::hdf5_output::{write_hdf5, DAFSource};
+#[cfg(feature = "hdf5")]
+use muad_dib::hdf5_output::write_hdf5;
 use muad_dib::spk_writer::write_spk;
 use muad_dib::{DAFFile, DAFSegment};
 use std::fs::File;
@@ -17,6 +20,7 @@ const TEST_FILE: &str = "test_data/test.bsp";
 
 /// Test that we can convert SPK to HDF5 and back, preserving segment count and metadata.
 #[test]
+#[cfg(feature = "hdf5")]
 fn test_round_trip_preserves_segments() {
     let temp_dir = std::env::temp_dir();
     let hdf5_path = temp_dir.join("round_trip_test.hdf5");
@@ -70,6 +74,7 @@ fn test_round_trip_preserves_segments() {
 
 /// Test that segment metadata is preserved through round-trip.
 #[test]
+#[cfg(feature = "hdf5")]
 fn test_round_trip_preserves_metadata() {
     let temp_dir = std::env::temp_dir();
     let hdf5_path = temp_dir.join("round_trip_metadata_test.hdf5");
@@ -148,6 +153,7 @@ fn test_round_trip_preserves_metadata() {
 
 /// Test that segment data is preserved through round-trip.
 #[test]
+#[cfg(feature = "hdf5")]
 fn test_round_trip_preserves_data() {
     let temp_dir = std::env::temp_dir();
     let hdf5_path = temp_dir.join("round_trip_data_test.hdf5");
@@ -218,6 +224,7 @@ fn test_round_trip_preserves_data() {
 
 /// Test that DAF header info is preserved.
 #[test]
+#[cfg(feature = "hdf5")]
 fn test_round_trip_preserves_header() {
     let temp_dir = std::env::temp_dir();
     let hdf5_path = temp_dir.join("round_trip_header_test.hdf5");
@@ -287,6 +294,7 @@ fn test_round_trip_preserves_comments() {
     };
 
     // Test HDF5 format
+    #[cfg(feature = "hdf5")]
     {
         let path = temp_dir.join("comment_test.hdf5");
         write_hdf5(&path, vec![source.clone()]).expect("Failed to write HDF5");

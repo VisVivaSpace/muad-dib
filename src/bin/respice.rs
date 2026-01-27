@@ -3,11 +3,13 @@
 use clap::{value_parser, Arg, Command};
 use muad_dib::error::Error;
 use muad_dib::formats::read_sources;
-use muad_dib::hdf5_input::read_pck_sources;
 use muad_dib::pck_writer::write_text_pck;
 use muad_dib::spk_writer::write_spk;
 use muad_dib::text_pck::PCKSource;
 use std::path::{Path, PathBuf};
+
+#[cfg(feature = "hdf5")]
+use muad_dib::hdf5_input::read_pck_sources;
 
 /// Read PCK sources from HDF5 file (only HDF5 supports PCK storage).
 fn read_pck_from_file(path: &Path) -> Result<Vec<PCKSource>, Error> {
@@ -18,7 +20,15 @@ fn read_pck_from_file(path: &Path) -> Result<Vec<PCKSource>, Error> {
         .to_lowercase();
 
     match ext.as_str() {
+        #[cfg(feature = "hdf5")]
         "hdf5" | "h5" => read_pck_sources(path),
+        #[cfg(not(feature = "hdf5"))]
+        "hdf5" | "h5" => {
+            eprintln!(
+                "Warning: HDF5 support not enabled. Rebuild with: cargo build --features hdf5"
+            );
+            Ok(Vec::new())
+        }
         _ => Ok(Vec::new()), // PCK only supported in HDF5
     }
 }

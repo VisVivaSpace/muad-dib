@@ -10,8 +10,9 @@
 //!     .build()?;
 //! ```
 
+use crate::daf_source::DAFSource;
+#[cfg(feature = "hdf5")]
 use crate::hdf5_input::{read_hdf5, read_pck_sources};
-use crate::hdf5_output::DAFSource;
 use crate::prelude::*;
 use crate::text_pck::PCKSource;
 use crate::DAFFile;
@@ -91,11 +92,16 @@ fn load_file(path: &Path) -> Result<(Vec<DAFSource>, Vec<PCKSource>)> {
             Ok((vec![], vec![source]))
         }
         // HDF5 (may contain both DAF and PCK)
+        #[cfg(feature = "hdf5")]
         "hdf5" | "h5" => {
             let daf_sources = read_hdf5(path)?;
             let pck_sources = read_pck_sources(path).unwrap_or_default();
             Ok((daf_sources, pck_sources))
         }
+        #[cfg(not(feature = "hdf5"))]
+        "hdf5" | "h5" => Err(Error::Format(
+            "HDF5 support not enabled. Rebuild with: cargo build --features hdf5".to_string(),
+        )),
         _ => Err(Error::UnknownFormat {
             format: format!("file extension: '{}'. Supported: bsp, spk, bc, ck, bpc, bpck, tpc, pck, tls, tsc, tf, hdf5, h5", ext)
         }),

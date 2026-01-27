@@ -1,7 +1,8 @@
 //! HDF5 output format implementation.
 
 use super::OutputFormat;
-use crate::hdf5_output::{write_hdf5, DAFSource};
+use crate::daf_source::DAFSource;
+use crate::hdf5_output::write_hdf5;
 use crate::prelude::*;
 use std::path::Path;
 

@@ -5,7 +5,7 @@
 //! or "what's the coverage for body X?"
 
 use crate::brief::CoverageInterval;
-use crate::hdf5_output::DAFSource;
+use crate::daf_source::DAFSource;
 use crate::types::NaifId;
 use crate::DAFSegment;
 use std::collections::HashMap;

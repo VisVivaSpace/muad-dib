@@ -9,6 +9,7 @@ pub enum Error {
     IO(#[from] std::io::Error),
 
     /// HDF5 library error.
+    #[cfg(feature = "hdf5")]
     #[error("HDF5 {operation}: {message}")]
     Hdf5 { operation: String, message: String },
 

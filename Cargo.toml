@@ -28,8 +28,8 @@ ratatui = "0.29"
 crossterm = "0.28"
 clap = "4.4.12"
 thiserror = "1.0.56"
-hdf5 = { package = "hdf5-metno", version = "0.12" }
-ndarray = "0.15"
+hdf5 = { package = "hdf5-metno", version = "0.12", optional = true }
+ndarray = { version = "0.15", optional = true }
 serde = { version = "1.0", features = ["derive"] }
 rmp-serde = "1.0"
 bson = "2.0"
@@ -39,6 +39,7 @@ serde_arrow = { version = "0.12", features = ["arrow-54"] }
 
 [features]
 default = []
+hdf5 = ["dep:hdf5", "dep:ndarray"]
 test-data = []  # Enable tests that require test_data/ directory (use with --features test-data)
 cspice = []     # Enable CSPICE validation tests (requires CSPICE library)
 

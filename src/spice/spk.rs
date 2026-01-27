@@ -137,7 +137,7 @@ impl SpkInterpolateExt for SpiceKernel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::hdf5_output::DAFSource;
+    use crate::daf_source::DAFSource;
     use crate::kernel::CoverageIndex;
     use crate::{DAFHeader, DAFMetadata, DAFSegment, Endian, SPKSegment};
 

@@ -7,7 +7,7 @@
 //! stored in Arrow. Only DAF binary files (SPK, CK, BPCK) are stored here.
 
 use super::OutputFormat;
-use crate::hdf5_output::DAFSource;
+use crate::daf_source::DAFSource;
 use crate::prelude::*;
 use crate::{BPCKSegment, CKSegment, DAFHeader, DAFMetadata, DAFSegment, Endian, SPKSegment};
 use arrow::datatypes::FieldRef;

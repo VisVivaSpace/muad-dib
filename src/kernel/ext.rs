@@ -2,7 +2,7 @@
 //!
 //! These traits add query methods to existing types without modifying them.
 
-use crate::hdf5_output::DAFSource;
+use crate::daf_source::DAFSource;
 use crate::types::NaifId;
 use crate::{BPCKSegment, CKSegment, DAFSegment, SPKSegment};
 

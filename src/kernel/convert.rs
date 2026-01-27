@@ -3,7 +3,7 @@
 //! These implementations allow convenient conversion from various source types
 //! into a unified SpiceKernel.
 
-use crate::hdf5_output::DAFSource;
+use crate::daf_source::DAFSource;
 use crate::text_pck::PCKSource;
 
 use super::coverage::CoverageIndex;

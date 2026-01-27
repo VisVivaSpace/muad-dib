@@ -1,7 +1,7 @@
 //! BSON output format implementation.
 
 use super::OutputFormat;
-use crate::hdf5_output::DAFSource;
+use crate::daf_source::DAFSource;
 use crate::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
