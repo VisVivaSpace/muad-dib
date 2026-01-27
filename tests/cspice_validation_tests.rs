@@ -19,13 +19,18 @@ use std::sync::Mutex;
 // Mutex to ensure CSPICE calls are serialized across tests
 static CSPICE_LOCK: Mutex<()> = Mutex::new(());
 
-/// Get the absolute path to the test file
-fn test_file_path() -> String {
+/// Get the absolute path to a test file
+fn test_file_path(filename: &str) -> String {
     std::env::current_dir()
         .expect("Could not get current directory")
-        .join("test_data/test.bsp")
+        .join(filename)
         .to_string_lossy()
         .into_owned()
+}
+
+/// Get the absolute path to the default test BSP file
+fn default_test_file_path() -> String {
+    test_file_path("test_data/test.bsp")
 }
 
 // ============================================================================
@@ -274,7 +279,7 @@ struct SegmentSummary {
 #[test]
 fn validate_file_record_matches_cspice() {
     let _lock = CSPICE_LOCK.lock().unwrap();
-    let test_file = test_file_path();
+    let test_file = default_test_file_path();
 
     // Load with despice
     let file = File::open(&test_file).expect("Could not open test file");
@@ -325,7 +330,7 @@ fn validate_file_record_matches_cspice() {
 #[test]
 fn validate_internal_name_matches_cspice() {
     let _lock = CSPICE_LOCK.lock().unwrap();
-    let test_file = test_file_path();
+    let test_file = default_test_file_path();
 
     // Load with despice
     let file = File::open(&test_file).expect("Could not open test file");
@@ -350,7 +355,7 @@ fn validate_internal_name_matches_cspice() {
 #[test]
 fn validate_segment_count_matches_cspice() {
     let _lock = CSPICE_LOCK.lock().unwrap();
-    let test_file = test_file_path();
+    let test_file = default_test_file_path();
 
     // Load with despice
     let file = File::open(&test_file).expect("Could not open test file");
@@ -375,7 +380,7 @@ fn validate_segment_count_matches_cspice() {
 #[test]
 fn validate_segment_summaries_match_cspice() {
     let _lock = CSPICE_LOCK.lock().unwrap();
-    let test_file = test_file_path();
+    let test_file = default_test_file_path();
 
     // Load with despice
     let file = File::open(&test_file).expect("Could not open test file");
@@ -460,7 +465,7 @@ fn validate_segment_summaries_match_cspice() {
 #[test]
 fn validate_segment_data_matches_cspice() {
     let _lock = CSPICE_LOCK.lock().unwrap();
-    let test_file = test_file_path();
+    let test_file = default_test_file_path();
 
     // Load with despice
     let file = File::open(&test_file).expect("Could not open test file");
@@ -506,7 +511,7 @@ fn validate_segment_data_matches_cspice() {
 #[test]
 fn validate_comments_match_cspice() {
     let _lock = CSPICE_LOCK.lock().unwrap();
-    let test_file = test_file_path();
+    let test_file = default_test_file_path();
 
     // Load with despice
     let file = File::open(&test_file).expect("Could not open test file");
@@ -532,4 +537,432 @@ fn validate_comments_match_cspice() {
         "Comment mismatch:\ndespice: '{}'\ncspice: '{}'",
         despice_comment, cspice_comment
     );
+}
+
+// ============================================================================
+// DE440s (SPK Type 2) Validation Tests
+// ============================================================================
+
+/// Validate de440s.bsp file record fields match between despice and CSPICE.
+#[test]
+fn validate_de440s_file_record() {
+    let _lock = CSPICE_LOCK.lock().unwrap();
+    let path = test_file_path("test_data/de440s.bsp");
+
+    let file = File::open(&path).expect("Could not open de440s.bsp");
+    let daf = DAFFile::from_file(file).expect("Failed to parse DAF file");
+    let meta = daf.daf_metadata();
+
+    let cspice_daf = CspiceDAF::open(&path).expect("CSPICE failed to open de440s.bsp");
+    let fr = cspice_daf.read_file_record();
+
+    assert_eq!(meta.nd as i32, fr.nd, "ND mismatch");
+    assert_eq!(meta.ni as i32, fr.ni, "NI mismatch");
+    assert_eq!(meta.fward as i32, fr.fward, "FWARD mismatch");
+    assert_eq!(meta.bward as i32, fr.bward, "BWARD mismatch");
+    assert_eq!(meta.free_address as i32, fr.free, "FREE mismatch");
+}
+
+/// Validate de440s.bsp segment summaries match between despice and CSPICE.
+#[test]
+fn validate_de440s_segment_summaries() {
+    let _lock = CSPICE_LOCK.lock().unwrap();
+    let path = test_file_path("test_data/de440s.bsp");
+
+    let file = File::open(&path).expect("Could not open de440s.bsp");
+    let daf = DAFFile::from_file(file).expect("Failed to parse DAF file");
+    let meta = daf.daf_metadata();
+    let despice_segments: Vec<_> = daf.filter_map(|s| s.ok()).collect();
+
+    let cspice_daf = CspiceDAF::open(&path).expect("CSPICE failed to open de440s.bsp");
+    let cspice_segments = cspice_daf.get_segments(meta.nd as i32, meta.ni as i32);
+
+    assert_eq!(
+        despice_segments.len(),
+        cspice_segments.len(),
+        "de440s segment count mismatch"
+    );
+
+    for (i, (despice_seg, cspice_sum)) in despice_segments
+        .iter()
+        .zip(cspice_segments.iter())
+        .enumerate()
+    {
+        let spk = match despice_seg {
+            DAFSegment::SPK(s) => s,
+            _ => panic!("de440s segment {} is not SPK", i),
+        };
+
+        assert!(
+            (spk.initial_epoch - cspice_sum.dc[0]).abs() < 1e-10,
+            "de440s segment {}: initial_epoch mismatch",
+            i
+        );
+        assert!(
+            (spk.final_epoch - cspice_sum.dc[1]).abs() < 1e-10,
+            "de440s segment {}: final_epoch mismatch",
+            i
+        );
+        assert_eq!(
+            spk.target_code, cspice_sum.ic[0],
+            "de440s segment {}: target_code",
+            i
+        );
+        assert_eq!(
+            spk.center_code, cspice_sum.ic[1],
+            "de440s segment {}: center_code",
+            i
+        );
+        assert_eq!(
+            spk.frame_code, cspice_sum.ic[2],
+            "de440s segment {}: frame_code",
+            i
+        );
+        assert_eq!(
+            spk.spk_type, cspice_sum.ic[3],
+            "de440s segment {}: spk_type",
+            i
+        );
+        assert_eq!(
+            spk.data_start as i32, cspice_sum.ic[4],
+            "de440s segment {}: data_start",
+            i
+        );
+        assert_eq!(
+            spk.data_end as i32, cspice_sum.ic[5],
+            "de440s segment {}: data_end",
+            i
+        );
+    }
+}
+
+/// Validate de440s.bsp segment data arrays match between despice and CSPICE.
+/// Spot-checks first and last 100 values per segment to keep test fast.
+#[test]
+fn validate_de440s_segment_data() {
+    let _lock = CSPICE_LOCK.lock().unwrap();
+    let path = test_file_path("test_data/de440s.bsp");
+
+    let file = File::open(&path).expect("Could not open de440s.bsp");
+    let daf = DAFFile::from_file(file).expect("Failed to parse DAF file");
+    let despice_segments: Vec<_> = daf.filter_map(|s| s.ok()).collect();
+
+    let cspice_daf = CspiceDAF::open(&path).expect("CSPICE failed to open de440s.bsp");
+
+    for (i, despice_seg) in despice_segments.iter().enumerate() {
+        let spk = match despice_seg {
+            DAFSegment::SPK(s) => s,
+            _ => panic!("de440s segment {} is not SPK", i),
+        };
+
+        let cspice_data = cspice_daf.read_data(spk.data_start as i32, spk.data_end as i32);
+
+        assert_eq!(
+            spk.data.len(),
+            cspice_data.len(),
+            "de440s segment {}: data length mismatch",
+            i
+        );
+
+        // Spot-check first 100 and last 100 values
+        let check_count = 100.min(spk.data.len());
+        for j in 0..check_count {
+            assert!(
+                (spk.data[j] - cspice_data[j]).abs() < 1e-15,
+                "de440s segment {} data[{}] mismatch: despice={}, cspice={}",
+                i,
+                j,
+                spk.data[j],
+                cspice_data[j]
+            );
+        }
+        let start = spk.data.len().saturating_sub(check_count);
+        for j in start..spk.data.len() {
+            assert!(
+                (spk.data[j] - cspice_data[j]).abs() < 1e-15,
+                "de440s segment {} data[{}] (tail) mismatch: despice={}, cspice={}",
+                i,
+                j,
+                spk.data[j],
+                cspice_data[j]
+            );
+        }
+    }
+}
+
+// ============================================================================
+// CK Validation Tests
+// ============================================================================
+
+/// Validate test.bc CK file record matches between despice and CSPICE.
+#[test]
+fn validate_ck_file_record() {
+    let _lock = CSPICE_LOCK.lock().unwrap();
+    let path = test_file_path("test_data/test.bc");
+
+    let file = File::open(&path).expect("Could not open test.bc");
+    let daf = DAFFile::from_file(file).expect("Failed to parse DAF file");
+    let meta = daf.daf_metadata();
+
+    let cspice_daf = CspiceDAF::open(&path).expect("CSPICE failed to open test.bc");
+    let fr = cspice_daf.read_file_record();
+
+    assert_eq!(meta.nd as i32, fr.nd, "CK ND mismatch");
+    assert_eq!(meta.ni as i32, fr.ni, "CK NI mismatch");
+    assert_eq!(meta.fward as i32, fr.fward, "CK FWARD mismatch");
+    assert_eq!(meta.bward as i32, fr.bward, "CK BWARD mismatch");
+    assert_eq!(meta.free_address as i32, fr.free, "CK FREE mismatch");
+}
+
+/// Validate test.bc CK segment summaries match between despice and CSPICE.
+#[test]
+fn validate_ck_segment_summaries() {
+    let _lock = CSPICE_LOCK.lock().unwrap();
+    let path = test_file_path("test_data/test.bc");
+
+    let file = File::open(&path).expect("Could not open test.bc");
+    let daf = DAFFile::from_file(file).expect("Failed to parse DAF file");
+    let meta = daf.daf_metadata();
+    let despice_segments: Vec<_> = daf.filter_map(|s| s.ok()).collect();
+
+    let cspice_daf = CspiceDAF::open(&path).expect("CSPICE failed to open test.bc");
+    let cspice_segments = cspice_daf.get_segments(meta.nd as i32, meta.ni as i32);
+
+    assert_eq!(
+        despice_segments.len(),
+        cspice_segments.len(),
+        "CK segment count mismatch"
+    );
+
+    for (i, (despice_seg, cspice_sum)) in despice_segments
+        .iter()
+        .zip(cspice_segments.iter())
+        .enumerate()
+    {
+        let ck = match despice_seg {
+            DAFSegment::CK(c) => c,
+            _ => panic!("test.bc segment {} is not CK", i),
+        };
+
+        // CK summary: dc[0]=initial_sclk, dc[1]=final_sclk
+        assert!(
+            (ck.initial_sclk - cspice_sum.dc[0]).abs() < 1e-10,
+            "CK segment {}: initial_sclk mismatch",
+            i
+        );
+        assert!(
+            (ck.final_sclk - cspice_sum.dc[1]).abs() < 1e-10,
+            "CK segment {}: final_sclk mismatch",
+            i
+        );
+
+        // CK summary: ic[0]=instrument, ic[1]=frame, ic[2]=ck_type, ic[3]=rates, ic[4]=start, ic[5]=end
+        assert_eq!(
+            ck.instrument_code, cspice_sum.ic[0],
+            "CK segment {}: instrument_code",
+            i
+        );
+        assert_eq!(
+            ck.frame_code, cspice_sum.ic[1],
+            "CK segment {}: frame_code",
+            i
+        );
+        assert_eq!(ck.ck_type, cspice_sum.ic[2], "CK segment {}: ck_type", i);
+        assert_eq!(
+            ck.rates as i32, cspice_sum.ic[3],
+            "CK segment {}: rates flag",
+            i
+        );
+        assert_eq!(
+            ck.data_start as i32, cspice_sum.ic[4],
+            "CK segment {}: data_start",
+            i
+        );
+        assert_eq!(
+            ck.data_end as i32, cspice_sum.ic[5],
+            "CK segment {}: data_end",
+            i
+        );
+    }
+}
+
+/// Validate test.bc CK data arrays match between despice and CSPICE.
+#[test]
+fn validate_ck_segment_data() {
+    let _lock = CSPICE_LOCK.lock().unwrap();
+    let path = test_file_path("test_data/test.bc");
+
+    let file = File::open(&path).expect("Could not open test.bc");
+    let daf = DAFFile::from_file(file).expect("Failed to parse DAF file");
+    let despice_segments: Vec<_> = daf.filter_map(|s| s.ok()).collect();
+
+    let cspice_daf = CspiceDAF::open(&path).expect("CSPICE failed to open test.bc");
+
+    for (i, despice_seg) in despice_segments.iter().enumerate() {
+        let ck = match despice_seg {
+            DAFSegment::CK(c) => c,
+            _ => panic!("test.bc segment {} is not CK", i),
+        };
+
+        let cspice_data = cspice_daf.read_data(ck.data_start as i32, ck.data_end as i32);
+
+        assert_eq!(
+            ck.data.len(),
+            cspice_data.len(),
+            "CK segment {}: data length mismatch",
+            i
+        );
+
+        for (j, (d, c)) in ck.data.iter().zip(cspice_data.iter()).enumerate() {
+            assert!(
+                (d - c).abs() < 1e-15,
+                "CK segment {} data[{}] mismatch: despice={}, cspice={}",
+                i,
+                j,
+                d,
+                c
+            );
+        }
+    }
+}
+
+// ============================================================================
+// BPC Validation Tests
+// ============================================================================
+
+/// Validate earth_latest_high_prec.bpc file record matches between despice and CSPICE.
+#[test]
+fn validate_bpc_file_record() {
+    let _lock = CSPICE_LOCK.lock().unwrap();
+    let path = test_file_path("test_data/earth_latest_high_prec.bpc");
+
+    let file = File::open(&path).expect("Could not open BPC file");
+    let daf = DAFFile::from_file(file).expect("Failed to parse DAF file");
+    let meta = daf.daf_metadata();
+
+    let cspice_daf = CspiceDAF::open(&path).expect("CSPICE failed to open BPC file");
+    let fr = cspice_daf.read_file_record();
+
+    assert_eq!(meta.nd as i32, fr.nd, "BPC ND mismatch");
+    assert_eq!(meta.ni as i32, fr.ni, "BPC NI mismatch");
+    assert_eq!(meta.fward as i32, fr.fward, "BPC FWARD mismatch");
+    assert_eq!(meta.bward as i32, fr.bward, "BPC BWARD mismatch");
+    assert_eq!(meta.free_address as i32, fr.free, "BPC FREE mismatch");
+}
+
+/// Validate earth_latest_high_prec.bpc segment summaries match between despice and CSPICE.
+#[test]
+fn validate_bpc_segment_summaries() {
+    let _lock = CSPICE_LOCK.lock().unwrap();
+    let path = test_file_path("test_data/earth_latest_high_prec.bpc");
+
+    let file = File::open(&path).expect("Could not open BPC file");
+    let daf = DAFFile::from_file(file).expect("Failed to parse DAF file");
+    let meta = daf.daf_metadata();
+    let despice_segments: Vec<_> = daf.filter_map(|s| s.ok()).collect();
+
+    let cspice_daf = CspiceDAF::open(&path).expect("CSPICE failed to open BPC file");
+    let cspice_segments = cspice_daf.get_segments(meta.nd as i32, meta.ni as i32);
+
+    assert_eq!(
+        despice_segments.len(),
+        cspice_segments.len(),
+        "BPC segment count mismatch"
+    );
+
+    for (i, (despice_seg, cspice_sum)) in despice_segments
+        .iter()
+        .zip(cspice_segments.iter())
+        .enumerate()
+    {
+        let bpck = match despice_seg {
+            DAFSegment::BPCK(b) => b,
+            _ => panic!("BPC segment {} is not BPCK", i),
+        };
+
+        // BPC summary: dc[0]=initial_epoch, dc[1]=final_epoch
+        assert!(
+            (bpck.initial_epoch - cspice_sum.dc[0]).abs() < 1e-10,
+            "BPC segment {}: initial_epoch mismatch",
+            i
+        );
+        assert!(
+            (bpck.final_epoch - cspice_sum.dc[1]).abs() < 1e-10,
+            "BPC segment {}: final_epoch mismatch",
+            i
+        );
+
+        // BPC summary: ic[0]=frame_id, ic[1]=base_frame, ic[2]=bpck_type, ic[3]=start, ic[4]=end
+        assert_eq!(
+            bpck.frame_id, cspice_sum.ic[0],
+            "BPC segment {}: frame_id",
+            i
+        );
+        assert_eq!(
+            bpck.base_frame, cspice_sum.ic[1],
+            "BPC segment {}: base_frame",
+            i
+        );
+        assert_eq!(
+            bpck.bpck_type, cspice_sum.ic[2],
+            "BPC segment {}: bpck_type",
+            i
+        );
+        assert_eq!(
+            bpck.data_start as i32, cspice_sum.ic[3],
+            "BPC segment {}: data_start",
+            i
+        );
+        assert_eq!(
+            bpck.data_end as i32, cspice_sum.ic[4],
+            "BPC segment {}: data_end",
+            i
+        );
+    }
+}
+
+// ============================================================================
+// Hermite SPK (Type 13) Validation Tests
+// ============================================================================
+
+/// Validate gmat-hermite.bsp data arrays match between despice and CSPICE.
+#[test]
+fn validate_hermite_spk_data() {
+    let _lock = CSPICE_LOCK.lock().unwrap();
+    let path = test_file_path("test_data/gmat-hermite.bsp");
+
+    let file = File::open(&path).expect("Could not open gmat-hermite.bsp");
+    let daf = DAFFile::from_file(file).expect("Failed to parse DAF file");
+    let despice_segments: Vec<_> = daf.filter_map(|s| s.ok()).collect();
+
+    let cspice_daf = CspiceDAF::open(&path).expect("CSPICE failed to open gmat-hermite.bsp");
+
+    for (i, despice_seg) in despice_segments.iter().enumerate() {
+        let spk = match despice_seg {
+            DAFSegment::SPK(s) => s,
+            _ => panic!("gmat-hermite segment {} is not SPK", i),
+        };
+
+        assert_eq!(spk.spk_type, 13, "Expected SPK Type 13 for gmat-hermite");
+
+        let cspice_data = cspice_daf.read_data(spk.data_start as i32, spk.data_end as i32);
+
+        assert_eq!(
+            spk.data.len(),
+            cspice_data.len(),
+            "Hermite segment {}: data length mismatch",
+            i
+        );
+
+        for (j, (d, c)) in spk.data.iter().zip(cspice_data.iter()).enumerate() {
+            assert!(
+                (d - c).abs() < 1e-15,
+                "Hermite segment {} data[{}] mismatch: despice={}, cspice={}",
+                i,
+                j,
+                d,
+                c
+            );
+        }
+    }
 }

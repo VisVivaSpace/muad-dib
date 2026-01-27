@@ -144,27 +144,23 @@ fn validate_case_insensitivity() {
 
     let kernel = SpiceKernel::load(&tpc_path()).expect("Failed to load TPC");
 
-    // CSPICE is case-insensitive
-    let cspice_upper = cspice_gdpool("BODY399_RADII").expect("Upper case failed");
-    let cspice_lower = cspice_gdpool("body399_radii").expect("Lower case failed");
-    let cspice_mixed = cspice_gdpool("Body399_Radii").expect("Mixed case failed");
+    // CSPICE kernel pool is case-sensitive (uppercase only)
+    let cspice_values = cspice_gdpool("BODY399_RADII").expect("CSPICE failed");
 
-    // muad-dib should also be case-insensitive
+    // muad-dib should be case-insensitive
     let muad_upper = kernel.get_f64("BODY399_RADII").expect("Upper case failed");
     let muad_lower = kernel.get_f64("body399_radii").expect("Lower case failed");
     let muad_mixed = kernel.get_f64("Body399_Radii").expect("Mixed case failed");
 
-    // All should be equal
-    assert_eq!(cspice_upper, cspice_lower, "CSPICE case sensitivity issue");
-    assert_eq!(cspice_upper, cspice_mixed, "CSPICE case sensitivity issue");
+    // All muad-dib variants should match each other
     assert_eq!(muad_upper, muad_lower, "muad-dib case sensitivity issue");
     assert_eq!(muad_upper, muad_mixed, "muad-dib case sensitivity issue");
 
-    // CSPICE and muad-dib should match
+    // muad-dib should match CSPICE
     for i in 0..muad_upper.len() {
         assert_close(
             muad_upper[i],
-            cspice_upper[i],
+            cspice_values[i],
             POOL_TOLERANCE,
             &format!("Case insensitive value[{}]", i),
         );

@@ -42,29 +42,6 @@ extern "C" {
         utcstr: *mut c_char,
     );
 
-    // Coordinate conversions
-    pub fn reclat_c(
-        rectan: *const c_double,
-        radius: *mut c_double,
-        lon: *mut c_double,
-        lat: *mut c_double,
-    );
-    pub fn latrec_c(radius: c_double, lon: c_double, lat: c_double, rectan: *mut c_double);
-    pub fn recsph_c(
-        rectan: *const c_double,
-        r: *mut c_double,
-        colat: *mut c_double,
-        lon: *mut c_double,
-    );
-    pub fn sphrec_c(r: c_double, colat: c_double, lon: c_double, rectan: *mut c_double);
-    pub fn reccyl_c(
-        rectan: *const c_double,
-        r: *mut c_double,
-        lon: *mut c_double,
-        z: *mut c_double,
-    );
-    pub fn cylrec_c(r: c_double, lon: c_double, z: c_double, rectan: *mut c_double);
-
     // Kernel pool
     pub fn gdpool_c(
         name: *const c_char,
@@ -223,66 +200,6 @@ pub fn cspice_et2utc(et: f64, format: &str, precision: i32) -> String {
             .to_string_lossy()
             .into_owned()
     }
-}
-
-/// Convert rectangular to latitudinal coordinates using reclat_c.
-pub fn cspice_reclat(rectan: &[f64; 3]) -> (f64, f64, f64) {
-    let mut radius: f64 = 0.0;
-    let mut lon: f64 = 0.0;
-    let mut lat: f64 = 0.0;
-    unsafe {
-        reclat_c(rectan.as_ptr(), &mut radius, &mut lon, &mut lat);
-    }
-    (radius, lon, lat)
-}
-
-/// Convert latitudinal to rectangular coordinates using latrec_c.
-pub fn cspice_latrec(radius: f64, lon: f64, lat: f64) -> [f64; 3] {
-    let mut rectan = [0.0f64; 3];
-    unsafe {
-        latrec_c(radius, lon, lat, rectan.as_mut_ptr());
-    }
-    rectan
-}
-
-/// Convert rectangular to spherical coordinates using recsph_c.
-pub fn cspice_recsph(rectan: &[f64; 3]) -> (f64, f64, f64) {
-    let mut r: f64 = 0.0;
-    let mut colat: f64 = 0.0;
-    let mut lon: f64 = 0.0;
-    unsafe {
-        recsph_c(rectan.as_ptr(), &mut r, &mut colat, &mut lon);
-    }
-    (r, colat, lon)
-}
-
-/// Convert spherical to rectangular coordinates using sphrec_c.
-pub fn cspice_sphrec(r: f64, colat: f64, lon: f64) -> [f64; 3] {
-    let mut rectan = [0.0f64; 3];
-    unsafe {
-        sphrec_c(r, colat, lon, rectan.as_mut_ptr());
-    }
-    rectan
-}
-
-/// Convert rectangular to cylindrical coordinates using reccyl_c.
-pub fn cspice_reccyl(rectan: &[f64; 3]) -> (f64, f64, f64) {
-    let mut r: f64 = 0.0;
-    let mut lon: f64 = 0.0;
-    let mut z: f64 = 0.0;
-    unsafe {
-        reccyl_c(rectan.as_ptr(), &mut r, &mut lon, &mut z);
-    }
-    (r, lon, z)
-}
-
-/// Convert cylindrical to rectangular coordinates using cylrec_c.
-pub fn cspice_cylrec(r: f64, lon: f64, z: f64) -> [f64; 3] {
-    let mut rectan = [0.0f64; 3];
-    unsafe {
-        cylrec_c(r, lon, z, rectan.as_mut_ptr());
-    }
-    rectan
 }
 
 /// Get double values from kernel pool using gdpool_c.
