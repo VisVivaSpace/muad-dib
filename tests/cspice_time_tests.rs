@@ -16,11 +16,24 @@ use muad_dib::kernel::SpiceKernel;
 use muad_dib::spice::{tdb_to_utc, utc_to_tdb, LeapSecondExt, TimeFormat};
 use muad_dib::types::EpochTDB;
 
-/// Tolerance for time parsing (microsecond precision).
-const TIME_PARSE_TOLERANCE: f64 = 1e-6;
+/// Tolerance for time parsing.
+/// muad-dib and CSPICE produce identical results for whole-second TDB strings.
+/// Allow 1e-9 (nanosecond) headroom for floating-point edge cases.
+const TIME_PARSE_TOLERANCE: f64 = 1e-9;
 
-/// Tolerance for TDB/UTC conversion (millisecond precision due to leap second model differences).
-const TDB_UTC_TOLERANCE: f64 = 1e-3;
+/// Tolerance for TDB/UTC conversion.
+/// With deltet matching CSPICE exactly, observed errors are < 7e-11.
+/// Allow 1e-9 (nanosecond) headroom for floating-point edge cases.
+const TDB_UTC_TOLERANCE: f64 = 1e-9;
+
+/// Convert a time string to CSPICE-compatible TDB format.
+///
+/// CSPICE's str2et_c defaults to UTC. To interpret as TDB, we append " TDB".
+/// However, ISO format strings (containing "T" delimiter) reject trailing text,
+/// so we replace "T" with " " first to use SPICE calendar format instead.
+fn as_cspice_tdb(time_str: &str) -> String {
+    format!("{} TDB", time_str.replace('T', " "))
+}
 
 // ============================================================================
 // Time Parsing Tests (str2et equivalent)
@@ -36,7 +49,7 @@ fn validate_time_parsing_j2000() {
 
     // J2000 epoch should be ~0 TDB
     let time_str = "2000-01-01T12:00:00";
-    let cspice_et = cspice_str2et(time_str);
+    let cspice_et = cspice_str2et(&as_cspice_tdb(time_str));
     let muad_et = EpochTDB::parse(time_str).expect("Failed to parse time");
 
     assert_close(
@@ -61,7 +74,7 @@ fn validate_time_parsing_fractional_seconds() {
     kernels.load(&lsk_path());
 
     let time_str = "2000-01-01T12:00:00.500";
-    let cspice_et = cspice_str2et(time_str);
+    let cspice_et = cspice_str2et(&as_cspice_tdb(time_str));
     let muad_et = EpochTDB::parse(time_str).expect("Failed to parse time");
 
     assert_close(
@@ -89,7 +102,7 @@ fn validate_time_parsing_recent_date() {
     kernels.load(&lsk_path());
 
     let time_str = "2020-06-15T14:30:00";
-    let cspice_et = cspice_str2et(time_str);
+    let cspice_et = cspice_str2et(&as_cspice_tdb(time_str));
     let muad_et = EpochTDB::parse(time_str).expect("Failed to parse time");
 
     assert_close(
@@ -111,7 +124,7 @@ fn validate_time_parsing_calendar_format() {
     kernels.load(&lsk_path());
 
     let time_str = "2000 JAN 01 12:00:00";
-    let cspice_et = cspice_str2et(time_str);
+    let cspice_et = cspice_str2et(&as_cspice_tdb(time_str));
     let muad_et = EpochTDB::parse(time_str).expect("Failed to parse calendar format");
 
     assert_close(
@@ -131,7 +144,7 @@ fn validate_time_parsing_julian_date() {
 
     // J2000 Julian Date
     let time_str = "JD 2451545.0";
-    let cspice_et = cspice_str2et(time_str);
+    let cspice_et = cspice_str2et(&as_cspice_tdb(time_str));
     let muad_et = EpochTDB::parse(time_str).expect("Failed to parse Julian Date");
 
     assert_close(
@@ -159,7 +172,7 @@ fn validate_time_parsing_various_formats() {
     ];
 
     for time_str in test_times.iter() {
-        let cspice_et = cspice_str2et(time_str);
+        let cspice_et = cspice_str2et(&as_cspice_tdb(time_str));
         let muad_et = EpochTDB::parse(time_str).expect(&format!("Failed to parse: {}", time_str));
 
         assert_close(
@@ -408,3 +421,96 @@ fn validate_delta_at_lookup() {
         "Leap seconds should not decrease over time"
     );
 }
+
+// ============================================================================
+// UTC Parsing via str2et Tests
+// ============================================================================
+
+#[test]
+fn validate_utc_parsing_via_str2et() {
+    let _lock = CSPICE_LOCK.lock().unwrap();
+
+    let mut cspice_kernels = CspiceKernels::new();
+    cspice_kernels.load(&lsk_path());
+
+    let kernel = SpiceKernel::load(&lsk_path()).expect("Failed to load LSK");
+
+    // str2et defaults to UTC interpretation
+    let test_utc_times = [
+        "2000-01-01T12:00:00",
+        "2010-06-15T14:30:00",
+        "2020-03-14T15:09:26",
+    ];
+
+    for utc_str in test_utc_times.iter() {
+        let cspice_et = cspice_str2et(utc_str); // defaults to UTC
+        let muad_tdb =
+            utc_to_tdb(&kernel, utc_str).expect(&format!("Failed to convert: {}", utc_str));
+
+        assert_close(
+            muad_tdb.0,
+            cspice_et,
+            TDB_UTC_TOLERANCE,
+            &format!("UTC str2et for {}", utc_str),
+        );
+    }
+}
+
+#[test]
+fn validate_tdb_utc_offset_at_j2000() {
+    let _lock = CSPICE_LOCK.lock().unwrap();
+
+    let mut cspice_kernels = CspiceKernels::new();
+    cspice_kernels.load(&lsk_path());
+
+    let kernel = SpiceKernel::load(&lsk_path()).expect("Failed to load LSK");
+
+    // EpochTDB::parse("2000-01-01T12:00:00") returns 0.0 (TDB at J2000)
+    // cspice_str2et("2000-01-01T12:00:00") returns ~64.184 (UTC → TDB)
+    // The difference is the TDB-UTC offset
+    let tdb_j2000 = EpochTDB::parse("2000-01-01T12:00:00").unwrap();
+    let cspice_utc_as_tdb = cspice_str2et("2000-01-01T12:00:00"); // UTC interpretation
+
+    let offset = cspice_utc_as_tdb - tdb_j2000.0;
+
+    // TDB-UTC = DELTA_T_A + leap_seconds + K*sin(E)
+    // At J2000, TAI-UTC = 32, DELTA_T_A = 32.184, plus periodic term
+    // CSPICE gives ~64.18393; 64.184 is only a rough approximation.
+    // Verify muad-dib matches CSPICE exactly instead of checking a hardcoded constant.
+    let muad_tdb = utc_to_tdb(&kernel, "2000-01-01T12:00:00").unwrap();
+    let muad_offset = muad_tdb.0 - tdb_j2000.0;
+    assert_close(muad_offset, offset, TDB_UTC_TOLERANCE, "TDB-UTC offset at J2000 vs CSPICE");
+
+    // Sanity: offset should be approximately 64.184
+    assert!(
+        (offset - 64.184).abs() < 0.001,
+        "TDB-UTC offset should be ~64.184, got {}",
+        offset
+    );
+
+    // Also verify DELTA_T_A constant
+    let lsk = kernel.lsk_data().expect("Should have LSK data");
+    assert_close(lsk.delta_t_a, 32.184, 1e-10, "DELTA_T_A");
+}
+
+#[test]
+fn validate_utc_parsing_calendar_format() {
+    let _lock = CSPICE_LOCK.lock().unwrap();
+
+    let mut cspice_kernels = CspiceKernels::new();
+    cspice_kernels.load(&lsk_path());
+
+    let kernel = SpiceKernel::load(&lsk_path()).expect("Failed to load LSK");
+
+    let utc_str = "2000 JAN 01 12:00:00";
+    let cspice_et = cspice_str2et(utc_str); // defaults to UTC
+    let muad_tdb = utc_to_tdb(&kernel, utc_str).expect("Failed to convert calendar UTC");
+
+    assert_close(
+        muad_tdb.0,
+        cspice_et,
+        TDB_UTC_TOLERANCE,
+        "UTC calendar format",
+    );
+}
+
