@@ -73,6 +73,7 @@ fn display_combined(summaries: &[FileSummary], opts: &BriefOptions) {
 /// Row data for tabular output.
 struct TabularRow {
     id_str: String,
+    type_str: Option<String>,
     frame_str: Option<String>,
     av_str: Option<String>,
     start: String,
@@ -111,8 +112,20 @@ fn display_tabular(objects: &[ObjectSummary], file_type: FileType, opts: &BriefO
                 None
             };
 
+            // Get segment type if show_types is enabled
+            let type_str = if opts.show_types {
+                interval
+                    .spk_type
+                    .or(interval.ck_type)
+                    .or(interval.bpck_type)
+                    .map(|t| t.to_string())
+            } else {
+                None
+            };
+
             rows.push(TabularRow {
                 id_str: id_str.clone(),
+                type_str,
                 frame_str: frame_str.clone(),
                 av_str,
                 start,
@@ -142,77 +155,60 @@ fn display_tabular(objects: &[ObjectSummary], file_type: FileType, opts: &BriefO
     } else {
         0
     };
+    let type_width = if opts.show_types { 4 } else { 0 }; // "Type" header
     let time_width = rows.iter().map(|r| r.start.len()).max().unwrap_or(24).max(24);
 
     // Print header
     let start_header = format!("Start of Interval ({})", time_label);
     let end_header = format!("End of Interval ({})", time_label);
 
-    if opts.show_rel_frame && is_ck {
-        println!(
-            "{:<iw$}  {:<fw$}  {:>2}  {:>tw$}  {:>tw$}",
-            id_label, "Rel. Frame", "AV", start_header, end_header,
-            iw = id_width, fw = frame_width, tw = time_width
-        );
-        println!(
-            "{:-<iw$}  {:-<fw$}  {:->2}  {:-<tw$}  {:-<tw$}",
-            "", "", "", "", "",
-            iw = id_width, fw = frame_width, tw = time_width
-        );
-    } else if is_ck {
-        println!(
-            "{:<iw$}  {:>2}  {:>tw$}  {:>tw$}",
-            id_label, "AV", start_header, end_header,
-            iw = id_width, tw = time_width
-        );
-        println!(
-            "{:-<iw$}  {:->2}  {:-<tw$}  {:-<tw$}",
-            "", "", "", "",
-            iw = id_width, tw = time_width
-        );
-    } else {
-        println!(
-            "{:<iw$}  {:>tw$}  {:>tw$}",
-            id_label, start_header, end_header,
-            iw = id_width, tw = time_width
-        );
-        println!(
-            "{:-<iw$}  {:-<tw$}  {:-<tw$}",
-            "", "", "",
-            iw = id_width, tw = time_width
-        );
+    // Build header and separator based on options
+    let mut header_parts = vec![format!("{:<iw$}", id_label, iw = id_width)];
+    let mut sep_parts = vec![format!("{:-<iw$}", "", iw = id_width)];
+
+    if opts.show_types {
+        header_parts.push(format!("{:>yw$}", "Type", yw = type_width));
+        sep_parts.push(format!("{:->yw$}", "", yw = type_width));
     }
+
+    if opts.show_rel_frame && is_ck {
+        header_parts.push(format!("{:<fw$}", "Rel. Frame", fw = frame_width));
+        sep_parts.push(format!("{:-<fw$}", "", fw = frame_width));
+    }
+
+    if is_ck {
+        header_parts.push(format!("{:>2}", "AV"));
+        sep_parts.push(format!("{:->2}", ""));
+    }
+
+    header_parts.push(format!("{:>tw$}", start_header, tw = time_width));
+    header_parts.push(format!("{:>tw$}", end_header, tw = time_width));
+    sep_parts.push(format!("{:-<tw$}", "", tw = time_width));
+    sep_parts.push(format!("{:-<tw$}", "", tw = time_width));
+
+    println!("{}", header_parts.join("  "));
+    println!("{}", sep_parts.join("  "));
 
     // Print rows
     for row in &rows {
-        if opts.show_rel_frame && is_ck {
-            println!(
-                "{:<iw$}  {:<fw$}  {:>2}  {:>tw$}  {:>tw$}",
-                row.id_str,
-                row.frame_str.as_deref().unwrap_or(""),
-                row.av_str.as_deref().unwrap_or(""),
-                row.start,
-                row.end,
-                iw = id_width, fw = frame_width, tw = time_width
-            );
-        } else if is_ck {
-            println!(
-                "{:<iw$}  {:>2}  {:>tw$}  {:>tw$}",
-                row.id_str,
-                row.av_str.as_deref().unwrap_or(""),
-                row.start,
-                row.end,
-                iw = id_width, tw = time_width
-            );
-        } else {
-            println!(
-                "{:<iw$}  {:>tw$}  {:>tw$}",
-                row.id_str,
-                row.start,
-                row.end,
-                iw = id_width, tw = time_width
-            );
+        let mut row_parts = vec![format!("{:<iw$}", row.id_str, iw = id_width)];
+
+        if opts.show_types {
+            row_parts.push(format!("{:>yw$}", row.type_str.as_deref().unwrap_or(""), yw = type_width));
         }
+
+        if opts.show_rel_frame && is_ck {
+            row_parts.push(format!("{:<fw$}", row.frame_str.as_deref().unwrap_or(""), fw = frame_width));
+        }
+
+        if is_ck {
+            row_parts.push(format!("{:>2}", row.av_str.as_deref().unwrap_or("")));
+        }
+
+        row_parts.push(format!("{:>tw$}", row.start, tw = time_width));
+        row_parts.push(format!("{:>tw$}", row.end, tw = time_width));
+
+        println!("{}", row_parts.join("  "));
     }
 }
 
@@ -267,20 +263,41 @@ fn display_grouped(objects: &[ObjectSummary], file_type: FileType, opts: &BriefO
         // Print coverage header
         let start_header = format!("Start of Interval ({})", time_label);
         let end_header = format!("End of Interval ({})", time_label);
-        println!(
-            "        {:^27}     {:^27}",
-            start_header, end_header
-        );
-        println!(
-            "        {:->27}     {:->27}",
-            "", ""
-        );
+        if opts.show_types {
+            println!(
+                "        {:^27}     {:^27}  {:>4}",
+                start_header, end_header, "Type"
+            );
+            println!(
+                "        {:->27}     {:->27}  {:->4}",
+                "", "", ""
+            );
+        } else {
+            println!(
+                "        {:^27}     {:^27}",
+                start_header, end_header
+            );
+            println!(
+                "        {:->27}     {:->27}",
+                "", ""
+            );
+        }
 
         // Print each interval
         for interval in intervals {
             let start = format_time_for_display(interval.start, opts.time_format, time_kind);
             let end = format_time_for_display(interval.end, opts.time_format, time_kind);
-            println!("        {:>27}     {:>27}", start, end);
+            if opts.show_types {
+                let type_num = interval
+                    .spk_type
+                    .or(interval.ck_type)
+                    .or(interval.bpck_type)
+                    .map(|t| t.to_string())
+                    .unwrap_or_default();
+                println!("        {:>27}     {:>27}  {:>4}", start, end, type_num);
+            } else {
+                println!("        {:>27}     {:>27}", start, end);
+            }
         }
         println!();
     }
@@ -350,19 +367,25 @@ mod tests {
         let a = vec![CoverageInterval {
             start: 0.0,
             end: 100.0,
+            spk_type: None,
             ck_type: None,
+            bpck_type: None,
             has_rates: None,
         }];
         let b = vec![CoverageInterval {
             start: 0.0,
             end: 100.0,
+            spk_type: None,
             ck_type: None,
+            bpck_type: None,
             has_rates: None,
         }];
         let c = vec![CoverageInterval {
             start: 0.0,
             end: 200.0,
+            spk_type: None,
             ck_type: None,
+            bpck_type: None,
             has_rates: None,
         }];
 

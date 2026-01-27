@@ -65,48 +65,55 @@ fn clenshaw(coeffs: &[f64], s: f64) -> f64 {
     coeffs[0] + s * b_k - b_k1
 }
 
-/// Evaluate Chebyshev derivative using recurrence.
+/// Evaluate Chebyshev derivative using the T-polynomial coefficient method.
 ///
 /// Computes the derivative of a Chebyshev series at normalized argument s.
-/// The derivative of T_n(s) is n * U_{n-1}(s) where U is Chebyshev of 2nd kind.
+/// Uses the recurrence to compute derivative coefficients g[] such that
+/// P'(s) = sum(g_k * T_k(s)), then evaluates using standard Clenshaw.
+///
+/// The recurrence for derivative coefficients:
+///   g_{n-1} = 2*n*c_n
+///   g_k = g_{k+2} + 2*(k+1)*c_{k+1}  for k = n-2, ..., 0
+///   g_0 = g_0 / 2  (halve zeroth coefficient)
+///
+/// Reference: Numerical Recipes Section 5.9, CSPICE chbint_c
 ///
 /// # Arguments
 ///
-/// * `coeffs` - Chebyshev coefficients
+/// * `coeffs` - Chebyshev coefficients [c_0, c_1, ..., c_{n-1}]
 /// * `s` - Normalized argument in [-1, 1]
-/// * `scale` - Scaling factor (2/interval_length for unit conversion)
+/// * `scale` - Scaling factor (1/radius for ds/dt conversion)
 ///
 /// # Returns
 ///
-/// The derivative of the Chebyshev polynomial at s.
+/// The derivative of the Chebyshev polynomial at s, scaled.
 fn clenshaw_derivative(coeffs: &[f64], s: f64, scale: f64) -> f64 {
     let n = coeffs.len();
     if n <= 1 {
         return 0.0;
     }
 
-    // Compute derivative coefficients
-    // If P(s) = sum(c_i * T_i(s)), then P'(s) = sum(d_i * T_i(s))
-    // where d_i are related to c_i by recurrence
+    // Compute derivative coefficients g[] such that P'(s) = sum(g_k * T_k(s))
+    // g has length n-1 (one less than original polynomial)
+    let mut g = vec![0.0; n - 1];
 
-    // Method: Use the identity dT_n/ds = n * U_{n-1}(s)
-    // and the recurrence for Chebyshev of 2nd kind
+    // g_{n-2} = 2*(n-1)*c_{n-1}  (highest derivative coeff)
+    g[n - 2] = 2.0 * (n - 1) as f64 * coeffs[n - 1];
 
-    let s2 = 2.0 * s;
-    let mut d_k = 0.0;
-    let mut d_k1 = 0.0;
-
-    // Derivative coefficients: d_i = 2*(i+1)*c_{i+1} + d_{i+2} for i < n-2
-    // Working backwards
-    for i in (1..n).rev() {
-        let d_k2 = d_k1;
-        d_k1 = d_k;
-        d_k = s2 * d_k1 - d_k2 + (i as f64) * coeffs[i];
+    // Recurrence: g_k = g_{k+2} + 2*(k+1)*c_{k+1}
+    // Working backwards from k = n-3 down to 0
+    for k in (0..n - 2).rev() {
+        let g_k_plus_2 = if k + 2 < g.len() { g[k + 2] } else { 0.0 };
+        g[k] = g_k_plus_2 + 2.0 * (k + 1) as f64 * coeffs[k + 1];
     }
 
-    // The derivative at s is (d1 - s*d2) * (2/interval)
-    // But our recurrence gives us what we need directly
-    scale * (d_k - s * d_k1)
+    // Halve the zeroth coefficient for Clenshaw evaluation
+    if !g.is_empty() {
+        g[0] /= 2.0;
+    }
+
+    // Evaluate P'(s) using standard Clenshaw on derivative coefficients
+    scale * clenshaw(&g, s)
 }
 
 /// Find the record index containing the given epoch.
@@ -266,8 +273,8 @@ mod tests {
         // coeffs [0, 0, 1] gives T_2(s) = 2s^2 - 1
         let coeffs = [0.0, 0.0, 1.0];
         assert!((clenshaw(&coeffs, 0.0) - (-1.0)).abs() < 1e-10); // 2*0 - 1 = -1
-        assert!((clenshaw(&coeffs, 1.0) - 1.0).abs() < 1e-10);    // 2*1 - 1 = 1
-        assert!((clenshaw(&coeffs, -1.0) - 1.0).abs() < 1e-10);   // 2*1 - 1 = 1
+        assert!((clenshaw(&coeffs, 1.0) - 1.0).abs() < 1e-10); // 2*1 - 1 = 1
+        assert!((clenshaw(&coeffs, -1.0) - 1.0).abs() < 1e-10); // 2*1 - 1 = 1
     }
 
     #[test]
@@ -277,6 +284,67 @@ mod tests {
         let scale = 1.0;
         assert!((clenshaw_derivative(&coeffs, 0.0, scale) - 2.0).abs() < 1e-10);
         assert!((clenshaw_derivative(&coeffs, 0.5, scale) - 2.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_clenshaw_derivative_quadratic() {
+        // P(s) = c0*T0(s) + c1*T1(s) + c2*T2(s)
+        //      = c0 + c1*s + c2*(2s^2 - 1)
+        // P'(s) = c1 + 4*c2*s
+        //
+        // With coeffs [0.0, 3.0, 2.0]:
+        //   P(s) = 0 + 3*s + 2*(2s^2 - 1) = 4s^2 + 3s - 2
+        //   P'(s) = 8s + 3
+        let coeffs = [0.0, 3.0, 2.0];
+        let scale = 1.0;
+
+        // P'(0) = 3
+        assert!((clenshaw_derivative(&coeffs, 0.0, scale) - 3.0).abs() < 1e-10);
+
+        // P'(0.5) = 8*0.5 + 3 = 7
+        assert!((clenshaw_derivative(&coeffs, 0.5, scale) - 7.0).abs() < 1e-10);
+
+        // P'(1.0) = 8*1 + 3 = 11
+        assert!((clenshaw_derivative(&coeffs, 1.0, scale) - 11.0).abs() < 1e-10);
+
+        // P'(-1.0) = 8*(-1) + 3 = -5
+        assert!((clenshaw_derivative(&coeffs, -1.0, scale) - (-5.0)).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_clenshaw_derivative_cubic() {
+        // T3(s) = 4s^3 - 3s
+        // P(s) = c3*T3(s) = c3*(4s^3 - 3s)
+        // P'(s) = c3*(12s^2 - 3)
+        //
+        // With coeffs [0, 0, 0, 1]:
+        //   P'(s) = 12s^2 - 3
+        let coeffs = [0.0, 0.0, 0.0, 1.0];
+        let scale = 1.0;
+
+        // P'(0) = -3
+        assert!((clenshaw_derivative(&coeffs, 0.0, scale) - (-3.0)).abs() < 1e-10);
+
+        // P'(1) = 12 - 3 = 9
+        assert!((clenshaw_derivative(&coeffs, 1.0, scale) - 9.0).abs() < 1e-10);
+
+        // P'(-1) = 12 - 3 = 9
+        assert!((clenshaw_derivative(&coeffs, -1.0, scale) - 9.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_clenshaw_derivative_with_scale() {
+        // Test that scaling works correctly
+        // If interval has radius=50, scale = 1/50 = 0.02
+        let coeffs = [1000.0, 100.0, 10.0];
+        let scale = 0.02;
+
+        // Unscaled P'(s) = c1 + 4*c2*s = 100 + 40s
+        // At s=0: P'(0) = 100, scaled = 2.0
+        // At s=0.5: P'(0.5) = 120, scaled = 2.4
+
+        assert!((clenshaw_derivative(&coeffs, 0.0, scale) - 2.0).abs() < 1e-10);
+        assert!((clenshaw_derivative(&coeffs, 0.5, scale) - 2.4).abs() < 1e-10);
     }
 
     #[test]

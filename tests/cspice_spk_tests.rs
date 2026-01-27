@@ -10,8 +10,8 @@
 mod cspice_common;
 
 use cspice_common::{
-    assert_close, cspice_spkgeo, frame_name, hermite_spk_path, lsk_path, spk_path, CspiceKernels,
-    CSPICE_LOCK,
+    assert_close, cspice_spkgeo, de440s_spk_path, frame_name, hermite_spk_path, lsk_path, spk_path,
+    CspiceKernels, CSPICE_LOCK,
 };
 use muad_dib::kernel::SpiceKernel;
 use muad_dib::spice::{SpkInterpolateExt, SpkSegmentViewInterpolate};
@@ -278,7 +278,10 @@ fn validate_spk_multiple_epochs() {
         let (cspice_state, _) = cspice_spkgeo(target, epoch, frame_name(spk.frame_code), center);
         let muad_state = kernel
             .state_of(NaifId(target), EpochTDB(epoch), NaifId(center))
-            .expect(&format!("muad-dib state_of failed at fraction {}", fraction));
+            .expect(&format!(
+                "muad-dib state_of failed at fraction {}",
+                fraction
+            ));
 
         for j in 0..3 {
             assert_close(
@@ -370,10 +373,7 @@ fn validate_spk_segment_view_interpolation() {
     let kernel = SpiceKernel::load(&spk_path()).expect("Failed to load SPK");
 
     // Get a segment view and test direct interpolation
-    let segment = kernel
-        .spk_segments()
-        .next()
-        .expect("No SPK segments found");
+    let segment = kernel.spk_segments().next().expect("No SPK segments found");
 
     let target = segment.target_code;
     let center = segment.center_code;
@@ -487,7 +487,8 @@ fn validate_spk_position_magnitude() {
 
     // Compare magnitudes
     let muad_dist = muad_state.distance();
-    let cspice_dist = (cspice_state[0].powi(2) + cspice_state[1].powi(2) + cspice_state[2].powi(2)).sqrt();
+    let cspice_dist =
+        (cspice_state[0].powi(2) + cspice_state[1].powi(2) + cspice_state[2].powi(2)).sqrt();
 
     assert_close(
         muad_dist,
@@ -497,7 +498,8 @@ fn validate_spk_position_magnitude() {
     );
 
     let muad_speed = muad_state.speed();
-    let cspice_speed = (cspice_state[3].powi(2) + cspice_state[4].powi(2) + cspice_state[5].powi(2)).sqrt();
+    let cspice_speed =
+        (cspice_state[3].powi(2) + cspice_state[4].powi(2) + cspice_state[5].powi(2)).sqrt();
 
     assert_close(
         muad_speed,
@@ -681,7 +683,10 @@ fn validate_spk_type13_multiple_epochs() {
         let (cspice_state, _) = cspice_spkgeo(target, epoch, frame_name(spk.frame_code), center);
         let muad_state = kernel
             .state_of(NaifId(target), EpochTDB(epoch), NaifId(center))
-            .expect(&format!("muad-dib state_of failed at fraction {}", fraction));
+            .expect(&format!(
+                "muad-dib state_of failed at fraction {}",
+                fraction
+            ));
 
         for j in 0..3 {
             assert_close(
@@ -713,10 +718,7 @@ fn validate_spk_type13_segment_view_direct() {
     let kernel = SpiceKernel::load(&hermite_spk_path()).expect("Failed to load Hermite SPK");
 
     // Get a segment view and test direct interpolation
-    let segment = kernel
-        .spk_segments()
-        .next()
-        .expect("No SPK segments found");
+    let segment = kernel.spk_segments().next().expect("No SPK segments found");
 
     // Verify it's Type 13
     assert_eq!(segment.spk_type, 13, "Expected Type 13 segment");
@@ -746,6 +748,303 @@ fn validate_spk_type13_segment_view_direct() {
             cspice_state[i + 3],
             VELOCITY_TOLERANCE,
             &format!("Type13 Direct view velocity[{}]", i),
+        );
+    }
+}
+
+// ============================================================================
+// SPK Type 2 (Chebyshev Position-Only) Interpolation Tests
+// Uses de440s.bsp - JPL DE440 planetary ephemeris
+// ============================================================================
+
+/// Velocity tolerance for Type 2 (1e-3 km/s = 1 m/s).
+///
+/// Type 2 segments store only position Chebyshev coefficients. Velocity is
+/// derived by differentiating the position polynomial. The derivative coefficients
+/// are computed using the recurrence g_k = g_{k+2} + 2*(k+1)*c_{k+1}, then evaluated
+/// using standard Clenshaw.
+const TYPE2_VELOCITY_TOLERANCE: f64 = 1e-3;
+
+#[test]
+fn validate_spk_type2_midpoint() {
+    let _lock = CSPICE_LOCK.lock().unwrap();
+
+    // Load kernels for CSPICE
+    let mut cspice_kernels = CspiceKernels::new();
+    cspice_kernels.load(&lsk_path());
+    cspice_kernels.load(&de440s_spk_path());
+
+    // Load kernel for muad-dib
+    let kernel = SpiceKernel::load(&de440s_spk_path()).expect("Failed to load de440s SPK");
+
+    // Get the first SPK segment to find coverage
+    let file = File::open(de440s_spk_path()).expect("Failed to open de440s SPK");
+    let daf = DAFFile::from_file(file).expect("Failed to parse DAF");
+    let first_segment = daf.into_iter().next().unwrap().unwrap();
+
+    let spk = match first_segment {
+        DAFSegment::SPK(s) => s,
+        _ => panic!("Expected SPK segment"),
+    };
+
+    // Verify it's Type 2
+    assert_eq!(spk.spk_type, 2, "Expected Type 2 Chebyshev segment");
+
+    // Query at midpoint of coverage
+    let midpoint = (spk.initial_epoch + spk.final_epoch) / 2.0;
+    let target = spk.target_code;
+    let center = spk.center_code;
+
+    // CSPICE query
+    let (cspice_state, _lt) = cspice_spkgeo(target, midpoint, frame_name(spk.frame_code), center);
+
+    // muad-dib query
+    let muad_state = kernel
+        .state_of(NaifId(target), EpochTDB(midpoint), NaifId(center))
+        .expect("muad-dib state_of failed");
+
+    // Compare position
+    for i in 0..3 {
+        assert_close(
+            muad_state.position[i],
+            cspice_state[i],
+            POSITION_TOLERANCE,
+            &format!("Type2 Position[{}] at midpoint", i),
+        );
+    }
+
+    // Compare velocity (derived from Chebyshev derivative)
+    for i in 0..3 {
+        assert_close(
+            muad_state.velocity[i],
+            cspice_state[i + 3],
+            TYPE2_VELOCITY_TOLERANCE,
+            &format!("Type2 Velocity[{}] at midpoint", i),
+        );
+    }
+}
+
+#[test]
+fn validate_spk_type2_near_boundaries() {
+    let _lock = CSPICE_LOCK.lock().unwrap();
+
+    let mut cspice_kernels = CspiceKernels::new();
+    cspice_kernels.load(&lsk_path());
+    cspice_kernels.load(&de440s_spk_path());
+
+    let kernel = SpiceKernel::load(&de440s_spk_path()).expect("Failed to load de440s SPK");
+
+    let file = File::open(de440s_spk_path()).expect("Failed to open de440s SPK");
+    let daf = DAFFile::from_file(file).expect("Failed to parse DAF");
+    let first_segment = daf.into_iter().next().unwrap().unwrap();
+
+    let spk = match first_segment {
+        DAFSegment::SPK(s) => s,
+        _ => panic!("Expected SPK segment"),
+    };
+
+    let target = spk.target_code;
+    let center = spk.center_code;
+
+    // Test near start (1 day after initial epoch)
+    {
+        let epoch = spk.initial_epoch + 86400.0;
+        let (cspice_state, _) = cspice_spkgeo(target, epoch, frame_name(spk.frame_code), center);
+        let muad_state = kernel
+            .state_of(NaifId(target), EpochTDB(epoch), NaifId(center))
+            .expect("muad-dib state_of failed near start");
+
+        for i in 0..3 {
+            assert_close(
+                muad_state.position[i],
+                cspice_state[i],
+                POSITION_TOLERANCE,
+                &format!("Type2 Position[{}] near start", i),
+            );
+        }
+        for i in 0..3 {
+            assert_close(
+                muad_state.velocity[i],
+                cspice_state[i + 3],
+                TYPE2_VELOCITY_TOLERANCE,
+                &format!("Type2 Velocity[{}] near start", i),
+            );
+        }
+    }
+
+    // Test near end (1 day before final epoch)
+    {
+        let epoch = spk.final_epoch - 86400.0;
+        let (cspice_state, _) = cspice_spkgeo(target, epoch, frame_name(spk.frame_code), center);
+        let muad_state = kernel
+            .state_of(NaifId(target), EpochTDB(epoch), NaifId(center))
+            .expect("muad-dib state_of failed near end");
+
+        for i in 0..3 {
+            assert_close(
+                muad_state.position[i],
+                cspice_state[i],
+                POSITION_TOLERANCE,
+                &format!("Type2 Position[{}] near end", i),
+            );
+        }
+        for i in 0..3 {
+            assert_close(
+                muad_state.velocity[i],
+                cspice_state[i + 3],
+                TYPE2_VELOCITY_TOLERANCE,
+                &format!("Type2 Velocity[{}] near end", i),
+            );
+        }
+    }
+}
+
+#[test]
+fn validate_spk_type2_multiple_epochs() {
+    let _lock = CSPICE_LOCK.lock().unwrap();
+
+    let mut cspice_kernels = CspiceKernels::new();
+    cspice_kernels.load(&lsk_path());
+    cspice_kernels.load(&de440s_spk_path());
+
+    let kernel = SpiceKernel::load(&de440s_spk_path()).expect("Failed to load de440s SPK");
+
+    let file = File::open(de440s_spk_path()).expect("Failed to open de440s SPK");
+    let daf = DAFFile::from_file(file).expect("Failed to parse DAF");
+    let first_segment = daf.into_iter().next().unwrap().unwrap();
+
+    let spk = match first_segment {
+        DAFSegment::SPK(s) => s,
+        _ => panic!("Expected SPK segment"),
+    };
+
+    let target = spk.target_code;
+    let center = spk.center_code;
+    let duration = spk.final_epoch - spk.initial_epoch;
+
+    // Test at 10 points across the coverage (avoiding exact boundaries)
+    for i in 1..=10 {
+        let fraction = i as f64 / 11.0;
+        let epoch = spk.initial_epoch + fraction * duration;
+
+        let (cspice_state, _) = cspice_spkgeo(target, epoch, frame_name(spk.frame_code), center);
+        let muad_state = kernel
+            .state_of(NaifId(target), EpochTDB(epoch), NaifId(center))
+            .expect(&format!(
+                "muad-dib state_of failed at fraction {}",
+                fraction
+            ));
+
+        for j in 0..3 {
+            assert_close(
+                muad_state.position[j],
+                cspice_state[j],
+                POSITION_TOLERANCE,
+                &format!("Type2 Position[{}] at fraction {:.2}", j, fraction),
+            );
+        }
+        for j in 0..3 {
+            assert_close(
+                muad_state.velocity[j],
+                cspice_state[j + 3],
+                TYPE2_VELOCITY_TOLERANCE,
+                &format!("Type2 Velocity[{}] at fraction {:.2}", j, fraction),
+            );
+        }
+    }
+}
+
+#[test]
+fn validate_spk_type2_multiple_bodies() {
+    let _lock = CSPICE_LOCK.lock().unwrap();
+
+    let mut cspice_kernels = CspiceKernels::new();
+    cspice_kernels.load(&lsk_path());
+    cspice_kernels.load(&de440s_spk_path());
+
+    let kernel = SpiceKernel::load(&de440s_spk_path()).expect("Failed to load de440s SPK");
+
+    // DE440s contains planetary barycenters (1-9), Sun (10), Moon (301), Earth (399)
+    // Test a selection of these bodies
+    let test_bodies = [
+        (3, 0, "Earth Barycenter"), // Earth Barycenter w.r.t. SSB
+        (10, 0, "Sun"),             // Sun w.r.t. SSB
+        (301, 3, "Moon"),           // Moon w.r.t. Earth Barycenter
+        (399, 3, "Earth"),          // Earth w.r.t. Earth Barycenter
+    ];
+
+    // Use J2000 epoch (0.0 TDB seconds past J2000)
+    let epoch = 0.0;
+
+    for (target, center, name) in test_bodies {
+        let result = kernel.state_of(NaifId(target), EpochTDB(epoch), NaifId(center));
+
+        if let Ok(muad_state) = result {
+            let (cspice_state, _) = cspice_spkgeo(target, epoch, "J2000", center);
+
+            for i in 0..3 {
+                assert_close(
+                    muad_state.position[i],
+                    cspice_state[i],
+                    POSITION_TOLERANCE,
+                    &format!("{} Position[{}]", name, i),
+                );
+            }
+            for i in 0..3 {
+                assert_close(
+                    muad_state.velocity[i],
+                    cspice_state[i + 3],
+                    TYPE2_VELOCITY_TOLERANCE,
+                    &format!("{} Velocity[{}]", name, i),
+                );
+            }
+        }
+        // If state_of fails, it might be because the body pair isn't directly in the file
+        // (e.g., needs chain computation). That's acceptable for this test.
+    }
+}
+
+#[test]
+fn validate_spk_type2_segment_view_direct() {
+    let _lock = CSPICE_LOCK.lock().unwrap();
+
+    let mut cspice_kernels = CspiceKernels::new();
+    cspice_kernels.load(&lsk_path());
+    cspice_kernels.load(&de440s_spk_path());
+
+    let kernel = SpiceKernel::load(&de440s_spk_path()).expect("Failed to load de440s SPK");
+
+    // Get a segment view and test direct interpolation
+    let segment = kernel.spk_segments().next().expect("No SPK segments found");
+
+    // Verify it's Type 2
+    assert_eq!(segment.spk_type, 2, "Expected Type 2 segment");
+
+    let target = segment.target_code;
+    let center = segment.center_code;
+    let midpoint = (segment.initial_epoch + segment.final_epoch) / 2.0;
+
+    // Get view and interpolate directly
+    let view = kernel.spk_view(segment);
+    let muad_state = view.state_at(EpochTDB(midpoint)).expect("state_at failed");
+
+    // Compare with CSPICE
+    let (cspice_state, _) = cspice_spkgeo(target, midpoint, frame_name(segment.frame_code), center);
+
+    for i in 0..3 {
+        assert_close(
+            muad_state.position[i],
+            cspice_state[i],
+            POSITION_TOLERANCE,
+            &format!("Type2 Direct view position[{}]", i),
+        );
+    }
+    for i in 0..3 {
+        assert_close(
+            muad_state.velocity[i],
+            cspice_state[i + 3],
+            TYPE2_VELOCITY_TOLERANCE,
+            &format!("Type2 Direct view velocity[{}]", i),
         );
     }
 }

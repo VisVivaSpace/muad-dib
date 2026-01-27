@@ -50,7 +50,9 @@ impl CoverageIndex {
                 let interval = CoverageInterval {
                     start: spk.initial_epoch,
                     end: spk.final_epoch,
+                    spk_type: Some(spk.spk_type),
                     ck_type: None,
+                    bpck_type: None,
                     has_rates: None,
                 };
                 self.spk_bodies
@@ -62,7 +64,9 @@ impl CoverageIndex {
                 let interval = CoverageInterval {
                     start: ck.initial_sclk,
                     end: ck.final_sclk,
+                    spk_type: None,
                     ck_type: Some(ck.ck_type),
+                    bpck_type: None,
                     has_rates: Some(ck.rates),
                 };
                 self.ck_instruments
@@ -74,7 +78,9 @@ impl CoverageIndex {
                 let interval = CoverageInterval {
                     start: bpck.initial_epoch,
                     end: bpck.final_epoch,
+                    spk_type: None,
                     ck_type: None,
+                    bpck_type: Some(bpck.bpck_type),
                     has_rates: None,
                 };
                 self.bpck_frames

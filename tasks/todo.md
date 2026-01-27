@@ -329,13 +329,51 @@ CSPICE_LIB=/Users/nstrange/cspice/lib cargo test --features cspice,test-data \
 
 ---
 
+## SPK Type 2 Velocity Derivative Issue
+
+**Status:** UNRESOLVED
+
+**Symptom:** Type 2 Chebyshev interpolation produces correct positions but incorrect velocities. The velocity values differ significantly from CSPICE (up to 4+ km/s difference).
+
+**Impact:** SPK Type 2 validation tests skip velocity assertions. Position interpolation passes all CSPICE validation tests.
+
+**Technical Details:**
+- Type 2 stores only position Chebyshev coefficients
+- Velocity is computed by differentiating the position polynomial
+- The `clenshaw_derivative()` function in `chebyshev.rs:82` implements the derivative
+- The derivative formula appears to have a bug in the recurrence relation
+
+**Test Output Example (de440s.bsp at midpoint):**
+```
+muad-dib velocity: [38.72, 2.84, -2.50] km/s
+CSPICE velocity:   [38.80, 7.03, -0.27] km/s
+Differences:       [0.08, 4.19, 2.23] km/s
+```
+
+**To Reproduce:**
+```bash
+CSPICE_LIB=/path/to/cspice/lib cargo test --features cspice,test-data \
+  --test cspice_spk_tests validate_spk_type2_midpoint -- --test-threads=1
+```
+
+**Investigation Notes:**
+- X component is close (0.08 km/s diff), Y and Z are significantly off
+- Suggests the derivative formula or scaling may be partially correct
+- NAIF SPICE uses CHBDER routine for Chebyshev derivatives - should compare implementations
+
+**Files Affected:**
+- `src/spice/interpolate/chebyshev.rs` - `clenshaw_derivative()` function
+- `tests/cspice_spk_tests.rs` - Type 2 velocity validation disabled
+
+---
+
 # SPK/CK Type Support Status
 
 ## SPK Types
 
 | Type | Name | Parsing | Interpolation | CSPICE Validation | Notes |
 |------|------|---------|---------------|-------------------|-------|
-| **2** | Chebyshev (pos only) | ✅ `spk_parse.rs` | ✅ `chebyshev.rs` | ❌ **NO TESTS** | Need test data file |
+| **2** | Chebyshev (pos only) | ✅ `spk_parse.rs` | ⚠️ `chebyshev.rs` | ✅ Position only | de440s.bsp; velocity derivative has known issue |
 | **3** | Chebyshev (pos+vel) | ✅ `spk_parse.rs` | ✅ `chebyshev.rs` | ❌ **NO TESTS** | Need test data file |
 | **5** | Discrete + two-body | ✅ `spk_parse.rs` | ✅ `twobody.rs` | ❌ **NO TESTS** | Need test data file |
 | **8** | Lagrange (equal time) | ✅ `spk_parse.rs` | ✅ `lagrange.rs` | ❌ **NO TESTS** | Unit tests only, need CSPICE validation |

@@ -94,6 +94,13 @@ fn main() {
                 .long("rel")
                 .action(ArgAction::SetTrue)
                 .help("Show reference frame column (CK files)"),
+        )
+        .arg(
+            Arg::new("types")
+                .short('y')
+                .long("types")
+                .action(ArgAction::SetTrue)
+                .help("Show segment data types (SPK/CK/BPCK type numbers)"),
         );
 
     let matches = app.get_matches();
@@ -128,6 +135,7 @@ fn main() {
         group_coverage: matches.get_flag("group"),
         time_format,
         show_rel_frame: matches.get_flag("rel"),
+        show_types: matches.get_flag("types"),
     };
 
     // Collect summaries from all files

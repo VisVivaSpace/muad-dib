@@ -39,8 +39,12 @@ pub struct CoverageInterval {
     pub start: f64,
     /// End time (TDB seconds past J2000 for SPK/BPCK, SCLK ticks for CK)
     pub end: f64,
+    /// SPK segment type (2, 3, 9, 13, etc.), None for CK/BPCK
+    pub spk_type: Option<i32>,
     /// CK segment type (1-6), None for SPK/BPCK
     pub ck_type: Option<i32>,
+    /// BPCK segment type, None for SPK/CK
+    pub bpck_type: Option<i32>,
     /// Whether angular velocity data is present, None for SPK/BPCK
     pub has_rates: Option<bool>,
 }
@@ -113,6 +117,8 @@ pub struct BriefOptions {
     pub time_format: TimeFormat,
     /// Show reference frame column (CK files)
     pub show_rel_frame: bool,
+    /// Show segment data types (SPK/CK/BPCK type numbers)
+    pub show_types: bool,
 }
 
 /// File summary containing header info and object summaries.
@@ -270,7 +276,9 @@ fn extract_segment_info(segment: &DAFSegment) -> SegmentInfo {
             interval: CoverageInterval {
                 start: spk.initial_epoch,
                 end: spk.final_epoch,
+                spk_type: Some(spk.spk_type),
                 ck_type: None,
+                bpck_type: None,
                 has_rates: None,
             },
             time_kind: TimeKind::TDB,
@@ -282,7 +290,9 @@ fn extract_segment_info(segment: &DAFSegment) -> SegmentInfo {
             interval: CoverageInterval {
                 start: ck.initial_sclk,
                 end: ck.final_sclk,
+                spk_type: None,
                 ck_type: Some(ck.ck_type),
+                bpck_type: None,
                 has_rates: Some(ck.rates),
             },
             time_kind: TimeKind::SCLK,
@@ -294,7 +304,9 @@ fn extract_segment_info(segment: &DAFSegment) -> SegmentInfo {
             interval: CoverageInterval {
                 start: bpck.initial_epoch,
                 end: bpck.final_epoch,
+                spk_type: None,
                 ck_type: None,
+                bpck_type: Some(bpck.bpck_type),
                 has_rates: None,
             },
             time_kind: TimeKind::TDB,

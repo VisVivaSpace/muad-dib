@@ -470,6 +470,11 @@ pub fn hermite_spk_path() -> String {
     test_file_path("test_data/gmat-hermite.bsp")
 }
 
+/// Get path to de440s.bsp (Type 2 Chebyshev - JPL DE440 planetary ephemeris)
+pub fn de440s_spk_path() -> String {
+    test_file_path("test_data/de440s.bsp")
+}
+
 // ============================================================================
 // Frame Helpers
 // ============================================================================
