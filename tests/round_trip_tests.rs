@@ -1,5 +1,7 @@
 //! Round-trip tests for SPK -> HDF5 -> SPK conversion.
 
+#![cfg(feature = "test-data")]
+
 use muad_dib::formats::arrow::read_arrow;
 use muad_dib::formats::bson::read_bson;
 use muad_dib::formats::get_format;

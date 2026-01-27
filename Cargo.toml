@@ -3,6 +3,7 @@ name = "muad-dib"
 version = "0.2.0"
 edition = "2021"
 license = "MIT"
+exclude = ["test_data/"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -38,7 +39,8 @@ serde_arrow = { version = "0.12", features = ["arrow-54"] }
 
 [features]
 default = []
-cspice = []
+test-data = []  # Enable tests that require test_data/ directory (use with --features test-data)
+cspice = []     # Enable CSPICE validation tests (requires CSPICE library)
 
 [dev-dependencies]
 tempfile = "3"

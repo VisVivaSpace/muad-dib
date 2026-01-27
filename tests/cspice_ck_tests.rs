@@ -6,7 +6,7 @@
 //! Note: CK queries may require SCLK kernel for proper SCLK-to-TDB conversion.
 //! Run with: cargo test --test cspice_ck_tests -- --test-threads=1
 
-#![cfg(feature = "cspice")]
+#![cfg(all(feature = "cspice", feature = "test-data"))]
 
 mod cspice_common;
 

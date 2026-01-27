@@ -1,3 +1,5 @@
+#![cfg(feature = "test-data")]
+
 use muad_dib::{DAFFile, DAFSegment};
 use std::fs::File;
 

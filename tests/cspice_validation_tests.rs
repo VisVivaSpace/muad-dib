@@ -9,7 +9,7 @@
 //! Note: CSPICE uses global state, so tests in this file must run sequentially.
 //! The test harness is invoked with --test-threads=1 via the test wrapper.
 
-#![cfg(feature = "cspice")]
+#![cfg(all(feature = "cspice", feature = "test-data"))]
 
 use muad_dib::{DAFFile, DAFSegment};
 use std::ffi::{CStr, CString};

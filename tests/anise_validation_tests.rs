@@ -3,6 +3,8 @@
 //! These tests ensure despice correctly parses DAF files by comparing results
 //! with anise's well-tested implementation.
 
+#![cfg(feature = "test-data")]
+
 use anise::naif::daf::DAF;
 use anise::naif::spk::summary::SPKSummaryRecord;
 use muad_dib::{DAFFile, DAFSegment, Endian};

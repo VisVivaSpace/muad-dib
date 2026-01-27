@@ -347,6 +347,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "test-data")]
     fn test_doc_example_basic_usage() {
         // Mirrors the "Basic Usage" doc example
         let kernel = SpiceKernel::load("test_data/test.bsp").unwrap();
@@ -358,6 +359,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "test-data")]
     fn test_doc_example_type_specific_access() {
         // Mirrors the "Type-Specific Data Access" doc example
         let kernel = SpiceKernel::load("test_data/test.bsp").unwrap();

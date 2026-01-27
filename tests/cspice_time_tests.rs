@@ -5,7 +5,7 @@
 //! Requires: naif0012.tls (leap seconds kernel)
 //! Run with: cargo test --test cspice_time_tests -- --test-threads=1
 
-#![cfg(feature = "cspice")]
+#![cfg(all(feature = "cspice", feature = "test-data"))]
 
 mod cspice_common;
 

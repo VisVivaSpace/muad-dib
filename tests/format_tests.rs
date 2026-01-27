@@ -3,6 +3,8 @@
 //! Tests that each output format can write and read data correctly,
 //! preserving segment counts and data through the round-trip.
 
+#![cfg(feature = "test-data")]
+
 use muad_dib::formats::arrow::read_arrow;
 use muad_dib::formats::bson::read_bson;
 use muad_dib::formats::msgpack::read_msgpack;

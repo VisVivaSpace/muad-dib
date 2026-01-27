@@ -5,7 +5,7 @@
 //! Requires: test.tpc (text PCK file)
 //! Run with: cargo test --test cspice_pool_tests -- --test-threads=1
 
-#![cfg(feature = "cspice")]
+#![cfg(all(feature = "cspice", feature = "test-data"))]
 
 mod cspice_common;
 
