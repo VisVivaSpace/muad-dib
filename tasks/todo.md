@@ -299,6 +299,97 @@ CSPICE_LIB=/Users/nstrange/cspice/lib cargo test --features cspice,test-data \
 # Result: 41 tests pass (13 SPK + 12 coord + 10 CK + 6 validation)
 ```
 
-## Known Issues (Pre-existing, Unrelated)
+---
 
-- Pool tests (`cspice_pool_tests.rs`) fail on case sensitivity - CSPICE `gdpool_c` doesn't find lowercase variable names. This is a separate issue not related to the window selection fix.
+# Known Issues
+
+## Pool Tests Failing (cspice_pool_tests.rs)
+
+**Status:** UNRESOLVED
+
+**Symptom:** The `validate_case_insensitivity` test fails with "Lower case failed" when querying `cspice_gdpool("body399_radii")`. CSPICE returns `None` for lowercase variable names.
+
+**Impact:** All 12 pool tests fail (first failure poisons the mutex, causing cascade PoisonError failures).
+
+**Expected Behavior:** CSPICE documentation states kernel pool variable names are case-insensitive.
+
+**Possible Causes:**
+1. CSPICE version or build configuration issue
+2. FFI wrapper not handling variable names correctly
+3. TPC kernel format affecting case handling
+4. Test expectation may be incorrect for this CSPICE version
+
+**To Reproduce:**
+```bash
+CSPICE_LIB=/Users/nstrange/cspice/lib cargo test --features cspice,test-data \
+  --test cspice_pool_tests validate_case_insensitivity -- --test-threads=1
+```
+
+**Workaround:** Use uppercase variable names only when querying CSPICE pool.
+
+---
+
+# SPK/CK Type Support Status
+
+## SPK Types
+
+| Type | Name | Parsing | Interpolation | CSPICE Validation | Notes |
+|------|------|---------|---------------|-------------------|-------|
+| **2** | Chebyshev (pos only) | ✅ `spk_parse.rs` | ✅ `chebyshev.rs` | ❌ **NO TESTS** | Need test data file |
+| **3** | Chebyshev (pos+vel) | ✅ `spk_parse.rs` | ✅ `chebyshev.rs` | ❌ **NO TESTS** | Need test data file |
+| **5** | Discrete + two-body | ✅ `spk_parse.rs` | ✅ `twobody.rs` | ❌ **NO TESTS** | Need test data file |
+| **8** | Lagrange (equal time) | ✅ `spk_parse.rs` | ✅ `lagrange.rs` | ❌ **NO TESTS** | Unit tests only, need CSPICE validation |
+| **9** | Lagrange (unequal time) | ✅ `spk_parse.rs` | ✅ `lagrange.rs` | ✅ **PASSING** | test.bsp contains Type 9 segments |
+| **13** | Hermite (unequal time) | ✅ `spk_parse.rs` | ✅ `hermite.rs` | ✅ **PASSING** | gmat-hermite.bsp contains Type 13 |
+| **21** | Extended mod. diff. | ❌ NOT IMPL | ❌ NOT IMPL | N/A | Common in JPL planetary ephemerides |
+
+### Test Data Files Needed
+
+To achieve full CSPICE validation coverage:
+
+- `test_data/type2.bsp` - Chebyshev position-only (e.g., from older planetary ephemeris)
+- `test_data/type3.bsp` - Chebyshev pos+vel
+- `test_data/type5.bsp` - Discrete states + two-body propagation
+- `test_data/type8.bsp` - Lagrange equal-spacing
+- `test_data/type21.bsp` - Extended modified differences (requires implementation first)
+
+## CK Types
+
+| Type | Name | Parsing | Interpolation | CSPICE Validation | Notes |
+|------|------|---------|---------------|-------------------|-------|
+| **1** | Discrete pointing | ✅ `ck_parse.rs` | ✅ `ck.rs` | ✅ **PASSING** | test.bc contains Type 1 |
+| **2** | Constant rate | ❌ NOT IMPL | ❌ NOT IMPL | N/A | |
+| **3** | Linear interp (SLERP) | ✅ `ck_parse.rs` | ✅ `ck.rs` | ✅ **PASSING** | test.bc contains Type 3 |
+| **4** | Chebyshev | ❌ NOT IMPL | ❌ NOT IMPL | N/A | |
+| **5** | MEX/Rosetta format | ❌ NOT IMPL | ❌ NOT IMPL | N/A | |
+| **6** | DSCS format | ❌ NOT IMPL | ❌ NOT IMPL | N/A | |
+
+## BPC (Binary PCK) Types
+
+| Type | Name | Parsing | Interpolation | CSPICE Validation | Notes |
+|------|------|---------|---------------|-------------------|-------|
+| **2** | Chebyshev | ✅ `bpck_parse.rs` | ❌ NOT IMPL | ❌ **NO TESTS** | Parsing works, need interpolation |
+
+---
+
+# Testing Summary
+
+## What's Fully Validated Against CSPICE
+
+- SPK Type 9 (Lagrange, unequal spacing) - 13 tests passing
+- SPK Type 13 (Hermite, unequal spacing) - included in SPK tests
+- CK Type 1 (Discrete) - 10 tests passing
+- CK Type 3 (Linear/SLERP) - included in CK tests
+- Coordinate conversions (lat/sph/cyl) - 12 tests passing
+- Basic kernel operations - 6 validation tests passing
+
+## What Needs CSPICE Validation
+
+- SPK Types 2, 3, 5, 8 - implemented but no test data
+- BPC Type 2 - parsing only, no interpolation
+
+## What's Not Implemented
+
+- SPK Type 21 (used in DE ephemerides like de440.bsp)
+- CK Types 2, 4, 5, 6
+- BPC interpolation
