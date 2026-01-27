@@ -4,17 +4,17 @@
 //! - Extracting leap second data from LSK (Leap Seconds Kernel) files
 //! - Converting between TDB (Barycentric Dynamical Time) and UTC
 //!
-//! # NAIF Time System Relationships
+//! # CSPICE-Compatible DELTET
+//!
+//! Conversions use the `deltet` formula matching CSPICE's `deltet_` exactly:
 //!
 //! ```text
-//! UTC → TAI → TT → TDB
-//!      +ΔAT  +32.184s  +periodic
+//! ET - UTC = DELTA_T_A + leap_seconds + K * sin(E)
 //! ```
 //!
-//! - **UTC**: Coordinated Universal Time (civil time)
-//! - **TAI**: International Atomic Time (TAI = UTC + ΔAT)
-//! - **TT**: Terrestrial Time (TT = TAI + 32.184 s)
-//! - **TDB**: Barycentric Dynamical Time (TDB ≈ TT + periodic terms)
+//! where `E` is derived from Earth's mean anomaly. The periodic term is
+//! evaluated at the nearest ET second to guarantee exact round-trip
+//! reversibility (`UTC → TDB → UTC`).
 //!
 //! # Example
 //!
@@ -53,8 +53,7 @@ pub enum EpochType {
 /// Contains all the constants needed for TDB/UTC conversion.
 #[derive(Debug, Clone)]
 pub struct LeapSecondData {
-    /// DELTET/DELTA_T_A: The TAI-UTC offset at the start of 1972.
-    /// Value is typically 32.184 seconds.
+    /// DELTET/DELTA_T_A: The TT-TAI offset (32.184 seconds).
     pub delta_t_a: f64,
 
     /// DELTET/K: A constant used in the TDB-TT relationship.
