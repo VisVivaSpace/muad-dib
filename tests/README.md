@@ -169,3 +169,49 @@ kernels.load(&lsk_path());  // Loaded via furnsh_c
 kernels.load(&spk_path());
 // Kernels automatically unloaded via unload_c when dropped
 ```
+
+## CSPICE Validation Coverage
+
+This section documents which SPK/CK types and functionality have been validated against CSPICE.
+
+### SPK Types
+
+| Type | Name | Status | Test File | Notes |
+|------|------|--------|-----------|-------|
+| **2** | Chebyshev (position only) | ✅ **VALIDATED** | `cspice_spk_tests.rs` | Uses `de440s.bsp` |
+| **9** | Lagrange (unequal time) | ✅ **VALIDATED** | `cspice_spk_tests.rs` | Uses `test.bsp` |
+| **13** | Hermite (unequal time) | ✅ **VALIDATED** | `cspice_spk_tests.rs` | Uses `gmat-hermite.bsp` |
+| 3 | Chebyshev (pos+vel) | ⚠️ Needs test data | — | Implemented, not validated |
+| 5 | Two-body propagation | ⚠️ Needs test data | — | Implemented, not validated |
+| 8 | Lagrange (equal time) | ⚠️ Needs test data | — | Implemented, not validated |
+
+### CK Types
+
+| Type | Name | Status | Test File | Notes |
+|------|------|--------|-----------|-------|
+| **1** | Discrete pointing | ✅ **VALIDATED** | `cspice_ck_tests.rs` | Quaternion interpolation |
+| **3** | Linear/SLERP | ✅ **VALIDATED** | `cspice_ck_tests.rs` | Spherical linear interp |
+
+**Note:** Angular velocity (`ckgpav_c`) is not currently validated. Only quaternion orientation is tested.
+
+### Other Functionality
+
+| Feature | Status | Test File | Notes |
+|---------|--------|-----------|-------|
+| Time parsing (str2et) | ✅ **VALIDATED** | `cspice_time_tests.rs` | UTC, ISO, calendar formats |
+| UTC↔TDB conversion | ✅ **VALIDATED** | `cspice_time_tests.rs` | Leap second handling |
+| Coordinate transforms | ✅ **VALIDATED** | `cspice_coord_tests.rs` | Cartesian↔Spherical↔Cylindrical |
+| Kernel pool (gdpool) | ✅ **VALIDATED** | `cspice_pool_tests.rs` | Text kernel variables |
+| DAF parsing | ✅ **VALIDATED** | `cspice_validation_tests.rs` | Segment iteration |
+
+### Adding New Validation Tests
+
+To add CSPICE validation for a new SPK/CK type:
+
+1. Obtain test data file (BSP/BC) containing that segment type
+2. Add file to `test_data/` (track with Git LFS)
+3. Create test in appropriate `cspice_*_tests.rs` file
+4. Use `CspiceKernels` helper for kernel management
+5. Compare against CSPICE using established tolerances
+
+See `docs/TYPE_SUPPORT.md` for full type support documentation.
