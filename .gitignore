@@ -1,4 +1,4 @@
-target/
 .claude/
-CLAUDE.md
 .DS_Store
+CLAUDE.md
+target/
