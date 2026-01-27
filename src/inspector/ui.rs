@@ -306,9 +306,9 @@ fn render_segments(frame: &mut Frame, area: Rect, app: &App, data_key: Option<&T
             file.segments
                 .iter()
                 .filter(|seg| match seg {
-                    DAFSegment::SPK(s) => s.target_code == obj_id,
-                    DAFSegment::CK(s) => s.instrument_code == obj_id,
-                    DAFSegment::BPCK(s) => s.frame_id == obj_id,
+                    DAFSegment::SPK(s) => s.target_code.0 == obj_id,
+                    DAFSegment::CK(s) => s.instrument_code.0 == obj_id,
+                    DAFSegment::BPCK(s) => s.frame_id.0 == obj_id,
                 })
                 .collect()
         } else {

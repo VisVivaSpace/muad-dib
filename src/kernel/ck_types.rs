@@ -82,26 +82,14 @@ pub struct PointingRecord {
     pub q2: f64,
     /// Quaternion k component (q3)
     pub q3: f64,
-    /// Angular velocity X component (rad/s), if present
-    pub av_x: Option<f64>,
-    /// Angular velocity Y component (rad/s), if present
-    pub av_y: Option<f64>,
-    /// Angular velocity Z component (rad/s), if present
-    pub av_z: Option<f64>,
+    /// Angular velocity vector [x, y, z] in rad/s, if present
+    pub angular_velocity: Option<[f64; 3]>,
 }
 
 impl PointingRecord {
     /// Get the quaternion as an array [q0, q1, q2, q3].
     pub fn quaternion(&self) -> [f64; 4] {
         [self.q0, self.q1, self.q2, self.q3]
-    }
-
-    /// Get the angular velocity as an array [av_x, av_y, av_z], if present.
-    pub fn angular_velocity(&self) -> Option<[f64; 3]> {
-        match (self.av_x, self.av_y, self.av_z) {
-            (Some(x), Some(y), Some(z)) => Some([x, y, z]),
-            _ => None,
-        }
     }
 }
 
@@ -152,13 +140,11 @@ mod tests {
             q1: 0.0,
             q2: 0.0,
             q3: 0.0,
-            av_x: Some(0.1),
-            av_y: Some(0.2),
-            av_z: Some(0.3),
+            angular_velocity: Some([0.1, 0.2, 0.3]),
         };
 
         assert_eq!(rec.quaternion(), [1.0, 0.0, 0.0, 0.0]);
-        assert_eq!(rec.angular_velocity(), Some([0.1, 0.2, 0.3]));
+        assert_eq!(rec.angular_velocity, Some([0.1, 0.2, 0.3]));
     }
 
     #[test]
@@ -169,11 +155,9 @@ mod tests {
             q1: 0.0,
             q2: 0.0,
             q3: 0.0,
-            av_x: None,
-            av_y: None,
-            av_z: None,
+            angular_velocity: None,
         };
 
-        assert_eq!(rec.angular_velocity(), None);
+        assert_eq!(rec.angular_velocity, None);
     }
 }

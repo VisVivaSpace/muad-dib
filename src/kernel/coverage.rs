@@ -56,7 +56,7 @@ impl CoverageIndex {
                     has_rates: None,
                 };
                 self.spk_bodies
-                    .entry(NaifId(spk.target_code))
+                    .entry(spk.target_code)
                     .or_default()
                     .push(interval);
             }
@@ -70,7 +70,7 @@ impl CoverageIndex {
                     has_rates: Some(ck.rates),
                 };
                 self.ck_instruments
-                    .entry(NaifId(ck.instrument_code))
+                    .entry(ck.instrument_code)
                     .or_default()
                     .push(interval);
             }
@@ -84,7 +84,7 @@ impl CoverageIndex {
                     has_rates: None,
                 };
                 self.bpck_frames
-                    .entry(NaifId(bpck.frame_id))
+                    .entry(bpck.frame_id)
                     .or_default()
                     .push(interval);
             }
@@ -165,9 +165,9 @@ mod tests {
             name: "test".to_string(),
             initial_epoch: 0.0,
             final_epoch: 86400.0,
-            target_code: 399,
-            center_code: 3,
-            frame_code: 1,
+            target_code: NaifId(399),
+            center_code: NaifId(3),
+            frame_code: NaifId(1),
             spk_type: 2,
             data_start: 1,
             data_end: 10,
@@ -190,8 +190,8 @@ mod tests {
             name: "test".to_string(),
             initial_sclk: 1000.0,
             final_sclk: 2000.0,
-            instrument_code: -82000,
-            frame_code: 1,
+            instrument_code: NaifId(-82000),
+            frame_code: NaifId(1),
             ck_type: 3,
             rates: true,
             data_start: 1,

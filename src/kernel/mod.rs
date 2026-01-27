@@ -170,7 +170,7 @@ impl SpiceKernel {
     /// Iterate over SPK segments for a specific body.
     pub fn spk_segments_for(&self, body: NaifId) -> impl Iterator<Item = &SPKSegment> {
         self.spk_segments()
-            .filter(move |spk| spk.target_code == body.0)
+            .filter(move |spk| spk.target_code == body)
     }
 
     /// Get an SPK segment view with lazy type-specific data parsing.
@@ -220,7 +220,7 @@ impl SpiceKernel {
     /// Iterate over CK segments for a specific instrument.
     pub fn ck_segments_for(&self, instrument: NaifId) -> impl Iterator<Item = &CKSegment> {
         self.ck_segments()
-            .filter(move |ck| ck.instrument_code == instrument.0)
+            .filter(move |ck| ck.instrument_code == instrument)
     }
 
     /// Get a CK segment view with lazy type-specific data parsing.
@@ -269,6 +269,9 @@ impl SpiceKernel {
     }
 
     /// Lookup a PCK variable by name (case-insensitive).
+    ///
+    /// Variable names are normalized to uppercase at parse time, so this
+    /// converts the query to uppercase for matching.
     pub fn pck_lookup(&self, name: &str) -> Option<&PCKVariable> {
         let name_upper = name.to_uppercase();
         self.pck_sources

@@ -289,6 +289,33 @@ fn calendar_to_tdb(
     minute: u32,
     second: f64,
 ) -> Result<EpochTDB> {
+    // Validate date/time ranges
+    if !(1..=12).contains(&month) {
+        return Err(Error::TimeParseError {
+            input: format!("invalid month: {}", month),
+        });
+    }
+    if !(1..=31).contains(&day) {
+        return Err(Error::TimeParseError {
+            input: format!("invalid day: {}", day),
+        });
+    }
+    if hour > 23 {
+        return Err(Error::TimeParseError {
+            input: format!("invalid hour: {}", hour),
+        });
+    }
+    if minute > 59 {
+        return Err(Error::TimeParseError {
+            input: format!("invalid minute: {}", minute),
+        });
+    }
+    if !(0.0..60.0).contains(&second) {
+        return Err(Error::TimeParseError {
+            input: format!("invalid second: {}", second),
+        });
+    }
+
     // Compute Julian Date using the algorithm from "Astronomical Algorithms" by Jean Meeus
     let y = if month <= 2 { year - 1 } else { year } as f64;
 
@@ -534,6 +561,41 @@ mod tests {
     fn test_parse_error() {
         let result = EpochTDB::parse("not a date");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_date_validation_invalid_month() {
+        assert!(calendar_to_tdb(2000, 0, 1, 12, 0, 0.0).is_err());
+        assert!(calendar_to_tdb(2000, 13, 1, 12, 0, 0.0).is_err());
+    }
+
+    #[test]
+    fn test_date_validation_invalid_day() {
+        assert!(calendar_to_tdb(2000, 1, 0, 12, 0, 0.0).is_err());
+        assert!(calendar_to_tdb(2000, 1, 32, 12, 0, 0.0).is_err());
+    }
+
+    #[test]
+    fn test_date_validation_invalid_hour() {
+        assert!(calendar_to_tdb(2000, 1, 1, 24, 0, 0.0).is_err());
+    }
+
+    #[test]
+    fn test_date_validation_invalid_minute() {
+        assert!(calendar_to_tdb(2000, 1, 1, 12, 60, 0.0).is_err());
+    }
+
+    #[test]
+    fn test_date_validation_invalid_second() {
+        assert!(calendar_to_tdb(2000, 1, 1, 12, 0, -1.0).is_err());
+        assert!(calendar_to_tdb(2000, 1, 1, 12, 0, 60.0).is_err());
+    }
+
+    #[test]
+    fn test_date_validation_valid_boundary() {
+        // Boundary values should pass
+        assert!(calendar_to_tdb(2000, 1, 1, 0, 0, 0.0).is_ok());
+        assert!(calendar_to_tdb(2000, 12, 31, 23, 59, 59.999).is_ok());
     }
 
     #[test]

@@ -71,28 +71,17 @@ fn parse_type1(data: &[f64], has_rates: bool) -> Option<CkData> {
     for (i, &sclk) in sclk_times.iter().enumerate() {
         let start = i * record_size;
 
-        let record = if has_rates {
-            PointingRecord {
-                sclk,
-                q0: data[start],
-                q1: data[start + 1],
-                q2: data[start + 2],
-                q3: data[start + 3],
-                av_x: Some(data[start + 4]),
-                av_y: Some(data[start + 5]),
-                av_z: Some(data[start + 6]),
-            }
-        } else {
-            PointingRecord {
-                sclk,
-                q0: data[start],
-                q1: data[start + 1],
-                q2: data[start + 2],
-                q3: data[start + 3],
-                av_x: None,
-                av_y: None,
-                av_z: None,
-            }
+        let record = PointingRecord {
+            sclk,
+            q0: data[start],
+            q1: data[start + 1],
+            q2: data[start + 2],
+            q3: data[start + 3],
+            angular_velocity: if has_rates {
+                Some([data[start + 4], data[start + 5], data[start + 6]])
+            } else {
+                None
+            },
         };
 
         records.push(record);
@@ -164,28 +153,17 @@ fn parse_type3(data: &[f64], has_rates: bool) -> Option<CkData> {
     for (i, &sclk) in sclk_times.iter().enumerate() {
         let start = i * record_size;
 
-        let record = if has_rates {
-            PointingRecord {
-                sclk,
-                q0: data[start],
-                q1: data[start + 1],
-                q2: data[start + 2],
-                q3: data[start + 3],
-                av_x: Some(data[start + 4]),
-                av_y: Some(data[start + 5]),
-                av_z: Some(data[start + 6]),
-            }
-        } else {
-            PointingRecord {
-                sclk,
-                q0: data[start],
-                q1: data[start + 1],
-                q2: data[start + 2],
-                q3: data[start + 3],
-                av_x: None,
-                av_y: None,
-                av_z: None,
-            }
+        let record = PointingRecord {
+            sclk,
+            q0: data[start],
+            q1: data[start + 1],
+            q2: data[start + 2],
+            q3: data[start + 3],
+            angular_velocity: if has_rates {
+                Some([data[start + 4], data[start + 5], data[start + 6]])
+            } else {
+                None
+            },
         };
 
         records.push(record);
@@ -233,7 +211,7 @@ mod tests {
             assert_eq!(ck1.records.len(), 2);
             assert_eq!(ck1.records[0].sclk, 1000.0);
             assert_eq!(ck1.records[0].quaternion(), [1.0, 0.0, 0.0, 0.0]);
-            assert!(ck1.records[0].angular_velocity().is_none());
+            assert!(ck1.records[0].angular_velocity.is_none());
         } else {
             panic!("Expected Type1");
         }
@@ -255,7 +233,7 @@ mod tests {
         if let CkData::Type1(ck1) = result {
             assert!(ck1.has_rates);
             assert_eq!(ck1.records.len(), 2);
-            assert_eq!(ck1.records[0].angular_velocity(), Some([0.1, 0.2, 0.3]));
+            assert_eq!(ck1.records[0].angular_velocity, Some([0.1, 0.2, 0.3]));
         } else {
             panic!("Expected Type1");
         }

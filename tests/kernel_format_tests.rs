@@ -30,7 +30,7 @@ fn test_parse_gmat_hermite_spk() {
     match &segments[0] {
         DAFSegment::SPK(spk) => {
             // GMAT spacecraft ID
-            assert_eq!(spk.target_code, -10000001);
+            assert_eq!(spk.target_code.0, -10000001);
             // Should be Type 13 (Hermite)
             assert_eq!(spk.spk_type, 13, "Expected SPK Type 13 (Hermite)");
         }
@@ -51,7 +51,7 @@ fn test_parse_gmat_lagrange_spk() {
 
     match &segments[0] {
         DAFSegment::SPK(spk) => {
-            assert_eq!(spk.target_code, -10000001);
+            assert_eq!(spk.target_code.0, -10000001);
             // Should be Type 9 (Lagrange)
             assert_eq!(spk.spk_type, 9, "Expected SPK Type 9 (Lagrange)");
         }
@@ -78,7 +78,7 @@ fn test_parse_big_endian_spk() {
     // Data should parse correctly despite endianness
     match &segments[0] {
         DAFSegment::SPK(spk) => {
-            assert_eq!(spk.target_code, -10000001);
+            assert_eq!(spk.target_code.0, -10000001);
             // Verify data is reasonable (not garbled by endian issues)
             assert!(spk.initial_epoch > 0.0, "Initial epoch should be positive");
             assert!(
@@ -163,7 +163,7 @@ fn test_parse_ck_file() {
             DAFSegment::CK(ck) => {
                 // CK instrument IDs are typically negative (spacecraft frame IDs)
                 assert!(
-                    ck.instrument_code != 0,
+                    ck.instrument_code.0 != 0,
                     "Segment {} should have non-zero instrument code",
                     i
                 );
@@ -379,13 +379,13 @@ fn test_parse_bpc_earth() {
             DAFSegment::BPCK(bpck) => {
                 // Earth body-fixed frame (ITRF93 or similar)
                 assert_eq!(
-                    bpck.frame_id, 3000,
+                    bpck.frame_id.0, 3000,
                     "Segment {} should have frame_id 3000",
                     i
                 );
                 // Base frame should be J2000 (1) or ICRF (17)
                 assert!(
-                    bpck.base_frame == 1 || bpck.base_frame == 17,
+                    bpck.base_frame.0 == 1 || bpck.base_frame.0 == 17,
                     "Segment {} should have base_frame 1 or 17, got {}",
                     i,
                     bpck.base_frame
@@ -426,7 +426,7 @@ fn test_parse_bpc_moon() {
             DAFSegment::BPCK(bpck) => {
                 // Moon principal axes frame
                 assert_eq!(
-                    bpck.frame_id, 31008,
+                    bpck.frame_id.0, 31008,
                     "Segment {} should have frame_id 31008",
                     i
                 );

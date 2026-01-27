@@ -70,6 +70,7 @@ impl From<(Vec<DAFSource>, Vec<PCKSource>)> for SpiceKernel {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::NaifId;
     use crate::{DAFHeader, DAFMetadata, DAFSegment, Endian, SPKSegment};
 
     fn make_test_daf_source() -> DAFSource {
@@ -93,9 +94,9 @@ mod tests {
                 name: "Earth".to_string(),
                 initial_epoch: 0.0,
                 final_epoch: 86400.0,
-                target_code: 399,
-                center_code: 3,
-                frame_code: 1,
+                target_code: NaifId(399),
+                center_code: NaifId(3),
+                frame_code: NaifId(1),
                 spk_type: 2,
                 data_start: 1,
                 data_end: 10,

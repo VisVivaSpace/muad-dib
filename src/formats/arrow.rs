@@ -9,6 +9,7 @@
 use super::OutputFormat;
 use crate::daf_source::DAFSource;
 use crate::prelude::*;
+use crate::types::NaifId;
 use crate::{BPCKSegment, CKSegment, DAFHeader, DAFMetadata, DAFSegment, Endian, SPKSegment};
 use arrow::datatypes::FieldRef;
 use arrow::ipc::reader::FileReader;
@@ -73,7 +74,14 @@ struct SegmentRow {
 }
 
 impl SegmentRow {
-    fn from_spk(source: &DAFSource, seg: &SPKSegment) -> Self {
+    fn base(
+        source: &DAFSource,
+        segment_type: &str,
+        segment_name: &str,
+        data_start: u64,
+        data_end: u64,
+        data: Vec<f64>,
+    ) -> Self {
         Self {
             source_filename: source.filename.clone(),
             source_name: source.header.name.clone(),
@@ -86,16 +94,16 @@ impl SegmentRow {
             meta_bward: source.metadata.bward,
             meta_free_address: source.metadata.free_address,
             meta_ftpstr: source.metadata.ftpstr.clone(),
-            segment_type: "SPK".to_string(),
-            segment_name: seg.name.clone(),
-            data_start: seg.data_start,
-            data_end: seg.data_end,
-            initial_epoch: Some(seg.initial_epoch),
-            final_epoch: Some(seg.final_epoch),
-            target_code: Some(seg.target_code),
-            center_code: Some(seg.center_code),
-            frame_code: Some(seg.frame_code),
-            spk_type: Some(seg.spk_type),
+            segment_type: segment_type.to_string(),
+            segment_name: segment_name.to_string(),
+            data_start,
+            data_end,
+            initial_epoch: None,
+            final_epoch: None,
+            target_code: None,
+            center_code: None,
+            frame_code: None,
+            spk_type: None,
             initial_sclk: None,
             final_sclk: None,
             instrument_code: None,
@@ -107,84 +115,40 @@ impl SegmentRow {
             frame_id: None,
             base_frame: None,
             bpck_type: None,
-            data: seg.data.clone(),
+            data,
         }
+    }
+
+    fn from_spk(source: &DAFSource, seg: &SPKSegment) -> Self {
+        let mut row = Self::base(source, "SPK", &seg.name, seg.data_start, seg.data_end, seg.data.clone());
+        row.initial_epoch = Some(seg.initial_epoch);
+        row.final_epoch = Some(seg.final_epoch);
+        row.target_code = Some(seg.target_code.0);
+        row.center_code = Some(seg.center_code.0);
+        row.frame_code = Some(seg.frame_code.0);
+        row.spk_type = Some(seg.spk_type);
+        row
     }
 
     fn from_ck(source: &DAFSource, seg: &CKSegment) -> Self {
-        Self {
-            source_filename: source.filename.clone(),
-            source_name: source.header.name.clone(),
-            source_comment: source.header.comment.clone(),
-            source_kind: source.header.kind.clone(),
-            meta_nd: source.metadata.nd,
-            meta_ni: source.metadata.ni,
-            meta_endian: source.metadata.endian.locfmt().to_string(),
-            meta_fward: source.metadata.fward,
-            meta_bward: source.metadata.bward,
-            meta_free_address: source.metadata.free_address,
-            meta_ftpstr: source.metadata.ftpstr.clone(),
-            segment_type: "CK".to_string(),
-            segment_name: seg.name.clone(),
-            data_start: seg.data_start,
-            data_end: seg.data_end,
-            initial_epoch: None,
-            final_epoch: None,
-            target_code: None,
-            center_code: None,
-            frame_code: None,
-            spk_type: None,
-            initial_sclk: Some(seg.initial_sclk),
-            final_sclk: Some(seg.final_sclk),
-            instrument_code: Some(seg.instrument_code),
-            ck_frame_code: Some(seg.frame_code),
-            ck_type: Some(seg.ck_type),
-            rates: Some(seg.rates),
-            bpck_initial_epoch: None,
-            bpck_final_epoch: None,
-            frame_id: None,
-            base_frame: None,
-            bpck_type: None,
-            data: seg.data.clone(),
-        }
+        let mut row = Self::base(source, "CK", &seg.name, seg.data_start, seg.data_end, seg.data.clone());
+        row.initial_sclk = Some(seg.initial_sclk);
+        row.final_sclk = Some(seg.final_sclk);
+        row.instrument_code = Some(seg.instrument_code.0);
+        row.ck_frame_code = Some(seg.frame_code.0);
+        row.ck_type = Some(seg.ck_type);
+        row.rates = Some(seg.rates);
+        row
     }
 
     fn from_bpck(source: &DAFSource, seg: &BPCKSegment) -> Self {
-        Self {
-            source_filename: source.filename.clone(),
-            source_name: source.header.name.clone(),
-            source_comment: source.header.comment.clone(),
-            source_kind: source.header.kind.clone(),
-            meta_nd: source.metadata.nd,
-            meta_ni: source.metadata.ni,
-            meta_endian: source.metadata.endian.locfmt().to_string(),
-            meta_fward: source.metadata.fward,
-            meta_bward: source.metadata.bward,
-            meta_free_address: source.metadata.free_address,
-            meta_ftpstr: source.metadata.ftpstr.clone(),
-            segment_type: "BPCK".to_string(),
-            segment_name: seg.name.clone(),
-            data_start: seg.data_start,
-            data_end: seg.data_end,
-            initial_epoch: None,
-            final_epoch: None,
-            target_code: None,
-            center_code: None,
-            frame_code: None,
-            spk_type: None,
-            initial_sclk: None,
-            final_sclk: None,
-            instrument_code: None,
-            ck_frame_code: None,
-            ck_type: None,
-            rates: None,
-            bpck_initial_epoch: Some(seg.initial_epoch),
-            bpck_final_epoch: Some(seg.final_epoch),
-            frame_id: Some(seg.frame_id),
-            base_frame: Some(seg.base_frame),
-            bpck_type: Some(seg.bpck_type),
-            data: seg.data.clone(),
-        }
+        let mut row = Self::base(source, "BPCK", &seg.name, seg.data_start, seg.data_end, seg.data.clone());
+        row.bpck_initial_epoch = Some(seg.initial_epoch);
+        row.bpck_final_epoch = Some(seg.final_epoch);
+        row.frame_id = Some(seg.frame_id.0);
+        row.base_frame = Some(seg.base_frame.0);
+        row.bpck_type = Some(seg.bpck_type);
+        row
     }
 }
 
@@ -328,9 +292,9 @@ pub fn read_arrow(path: &Path) -> Result<Vec<DAFSource>> {
                         name: row.segment_name,
                         initial_epoch: row.initial_epoch.unwrap_or(0.0),
                         final_epoch: row.final_epoch.unwrap_or(0.0),
-                        target_code: row.target_code.unwrap_or(0),
-                        center_code: row.center_code.unwrap_or(0),
-                        frame_code: row.frame_code.unwrap_or(0),
+                        target_code: NaifId(row.target_code.unwrap_or(0)),
+                        center_code: NaifId(row.center_code.unwrap_or(0)),
+                        frame_code: NaifId(row.frame_code.unwrap_or(0)),
                         spk_type: row.spk_type.unwrap_or(0),
                         data_start: row.data_start,
                         data_end: row.data_end,
@@ -340,8 +304,8 @@ pub fn read_arrow(path: &Path) -> Result<Vec<DAFSource>> {
                         name: row.segment_name,
                         initial_sclk: row.initial_sclk.unwrap_or(0.0),
                         final_sclk: row.final_sclk.unwrap_or(0.0),
-                        instrument_code: row.instrument_code.unwrap_or(0),
-                        frame_code: row.ck_frame_code.unwrap_or(0),
+                        instrument_code: NaifId(row.instrument_code.unwrap_or(0)),
+                        frame_code: NaifId(row.ck_frame_code.unwrap_or(0)),
                         ck_type: row.ck_type.unwrap_or(0),
                         rates: row.rates.unwrap_or(false),
                         data_start: row.data_start,
@@ -352,8 +316,8 @@ pub fn read_arrow(path: &Path) -> Result<Vec<DAFSource>> {
                         name: row.segment_name,
                         initial_epoch: row.bpck_initial_epoch.unwrap_or(0.0),
                         final_epoch: row.bpck_final_epoch.unwrap_or(0.0),
-                        frame_id: row.frame_id.unwrap_or(0),
-                        base_frame: row.base_frame.unwrap_or(0),
+                        frame_id: NaifId(row.frame_id.unwrap_or(0)),
+                        base_frame: NaifId(row.base_frame.unwrap_or(0)),
                         bpck_type: row.bpck_type.unwrap_or(0),
                         data_start: row.data_start,
                         data_end: row.data_end,

@@ -58,16 +58,16 @@ impl<'a> SpkSegmentView<'a> {
 
     /// Get the target body NAIF ID.
     pub fn target(&self) -> NaifId {
-        NaifId(self.segment.target_code)
+        self.segment.target_code
     }
 
     /// Get the center body NAIF ID.
     pub fn center(&self) -> NaifId {
-        NaifId(self.segment.center_code)
+        self.segment.center_code
     }
 
-    /// Get the reference frame code.
-    pub fn frame(&self) -> i32 {
+    /// Get the reference frame NAIF ID.
+    pub fn frame(&self) -> NaifId {
         self.segment.frame_code
     }
 
@@ -128,9 +128,9 @@ mod tests {
             name: "TEST SEGMENT".to_string(),
             initial_epoch: 0.0,
             final_epoch: 86400.0,
-            target_code: 399,
-            center_code: 3,
-            frame_code: 1,
+            target_code: NaifId(399),
+            center_code: NaifId(3),
+            frame_code: NaifId(1),
             spk_type: 2,
             data_start: 1,
             data_end: 12,
@@ -158,7 +158,7 @@ mod tests {
         assert_eq!(view.name(), "TEST SEGMENT");
         assert_eq!(view.target(), NaifId(399));
         assert_eq!(view.center(), NaifId(3));
-        assert_eq!(view.frame(), 1);
+        assert_eq!(view.frame(), NaifId(1));
         assert_eq!(view.spk_type(), 2);
         assert_eq!(view.initial_epoch(), 0.0);
         assert_eq!(view.final_epoch(), 86400.0);

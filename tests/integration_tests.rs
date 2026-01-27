@@ -63,7 +63,7 @@ fn test_segment_metadata() {
             );
 
             // Verify target is spacecraft -82 (Cassini-like negative ID)
-            assert_eq!(spk.target_code, -82);
+            assert_eq!(spk.target_code.0, -82);
         }
         _ => panic!("Expected SPK segment"),
     }

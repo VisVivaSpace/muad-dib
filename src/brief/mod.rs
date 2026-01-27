@@ -284,8 +284,8 @@ struct SegmentInfo {
 fn extract_segment_info(segment: &DAFSegment) -> SegmentInfo {
     match segment {
         DAFSegment::SPK(spk) => SegmentInfo {
-            id: spk.target_code,
-            center: Some(spk.center_code),
+            id: spk.target_code.0,
+            center: Some(spk.center_code.0),
             interval: CoverageInterval {
                 start: spk.initial_epoch,
                 end: spk.final_epoch,
@@ -298,7 +298,7 @@ fn extract_segment_info(segment: &DAFSegment) -> SegmentInfo {
             frame_code: None,
         },
         DAFSegment::CK(ck) => SegmentInfo {
-            id: ck.instrument_code,
+            id: ck.instrument_code.0,
             center: None, // CK doesn't have a center concept
             interval: CoverageInterval {
                 start: ck.initial_sclk,
@@ -309,11 +309,11 @@ fn extract_segment_info(segment: &DAFSegment) -> SegmentInfo {
                 has_rates: Some(ck.rates),
             },
             time_kind: TimeKind::SCLK,
-            frame_code: Some(ck.frame_code),
+            frame_code: Some(ck.frame_code.0),
         },
         DAFSegment::BPCK(bpck) => SegmentInfo {
-            id: bpck.frame_id,
-            center: Some(bpck.base_frame),
+            id: bpck.frame_id.0,
+            center: Some(bpck.base_frame.0),
             interval: CoverageInterval {
                 start: bpck.initial_epoch,
                 end: bpck.final_epoch,

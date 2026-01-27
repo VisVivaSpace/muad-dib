@@ -49,6 +49,7 @@
 //! ```
 
 use crate::prelude::*;
+use crate::types::NaifId;
 
 pub mod brief;
 pub mod daf_source;
@@ -87,97 +88,128 @@ pub const NATIVE_ENDIAN: Endian = Endian::Big;
 #[cfg(target_endian = "little")]
 pub const NATIVE_ENDIAN: Endian = Endian::Little;
 
-fn get_f64(mut f: &File, offset: u64, endian: &Endian) -> Result<f64> {
-    f.seek(SeekFrom::Start(offset))?;
+// DAF file record byte offsets
+const DAF_OFFSET_TYPE: u64 = 4; // File type character (S=SPK, C=CK, P=BPCK)
+const DAF_OFFSET_ND: u64 = 8; // Number of double components per summary
+const DAF_OFFSET_NI: u64 = 12; // Number of integer components per summary
+const DAF_OFFSET_LOCIFN: u64 = 16; // Internal filename (60 chars)
+const DAF_OFFSET_FWARD: u64 = 76; // Forward pointer to first summary record
+const DAF_OFFSET_BWARD: u64 = 80; // Backward pointer to last summary record
+const DAF_OFFSET_FREE: u64 = 84; // First free address
+const DAF_OFFSET_LOCFMT: u64 = 88; // Endianness indicator
+const DAF_OFFSET_FTPSTR: u64 = 699; // FTP validation string
 
-    let mut buf: [u8; 8] = [0; 8];
-    f.read_exact(&mut buf)?;
+// DAF summary field offsets (relative to summary pointer)
+const SUMMARY_DC0: u64 = 0; // First double (initial_epoch / initial_sclk)
+const SUMMARY_DC1: u64 = 8; // Second double (final_epoch / final_sclk)
+const SUMMARY_IC0: u64 = 16; // First integer (target_code / instrument_code / frame_id)
+const SUMMARY_IC1: u64 = 20; // Second integer (center_code / frame_code / base_frame)
+const SUMMARY_IC2: u64 = 24; // Third integer (frame_code / ck_type / bpck_type)
+const SUMMARY_IC3: u64 = 28; // Fourth integer (spk_type / rates / data_start for BPCK)
+const SUMMARY_IC4: u64 = 32; // Fifth integer (data_start / data_start / data_end for BPCK)
+const SUMMARY_IC5: u64 = 36; // Sixth integer (data_end / data_end)
 
-    match endian {
-        Endian::Little => Ok(f64::from_le_bytes(buf)),
-        Endian::Big => Ok(f64::from_be_bytes(buf)),
-    }
+/// Low-level binary reader for DAF files.
+///
+/// Wraps a `File` handle and `Endian` setting, providing type-safe reads
+/// at arbitrary byte offsets with correct endian conversion.
+#[derive(Debug)]
+struct DafReader {
+    file: File,
+    endian: Endian,
 }
 
-fn get_f64vec(f: &File, daf_addr1: u64, daf_addr2: u64, endian: &Endian) -> Result<Vec<f64>> {
-    // DAF addresses are 1-indexed double-word (8-byte) indices
-    // daf_addr2 is inclusive, so we have (daf_addr2 - daf_addr1 + 1) elements
-    let num_elements = (daf_addr2 - daf_addr1 + 1) as usize;
-    let mut vectr = Vec::with_capacity(num_elements);
-
-    for daf_addr in daf_addr1..=daf_addr2 {
-        // Convert DAF address to byte offset: (N-1) * 8
-        let byte_offset = (daf_addr - 1) * 8;
-        vectr.push(get_f64(f, byte_offset, endian)?);
+impl DafReader {
+    fn new(file: File) -> Result<Self> {
+        let endian = Self::detect_endian(&file)?;
+        Ok(Self { file, endian })
     }
 
-    Ok(vectr)
-}
-
-fn get_char(mut f: &File, offset: u64) -> Result<char> {
-    f.seek(SeekFrom::Start(offset))?;
-
-    let mut buf: [u8; 1] = [0];
-    f.read_exact(&mut buf)?;
-
-    if buf[0].is_ascii() {
-        Ok(buf[0] as char)
-    } else {
-        Err(Error::InvalidHeader(format!(
-            "non-ASCII byte 0x{:02X} at offset {}",
-            buf[0], offset
-        )))
+    fn detect_endian(f: &File) -> Result<Endian> {
+        let endian_char = Self::read_char_at(f, DAF_OFFSET_LOCFMT)?;
+        match endian_char {
+            'B' | 'b' => Ok(Endian::Big),
+            'L' | 'l' => Ok(Endian::Little),
+            _ => Err(Error::InvalidEndian { found: endian_char }),
+        }
     }
-}
 
-fn get_i32(mut f: &File, offset: u64, endian: &Endian) -> Result<i32> {
-    f.seek(SeekFrom::Start(offset))?;
-
-    let mut buf: [u8; 4] = [0; 4];
-    f.read_exact(&mut buf)?;
-
-    match endian {
-        Endian::Little => Ok(i32::from_le_bytes(buf)),
-        Endian::Big => Ok(i32::from_be_bytes(buf)),
+    fn read_char_at(f: &File, offset: u64) -> Result<char> {
+        let mut f = f;
+        f.seek(SeekFrom::Start(offset))?;
+        let mut buf: [u8; 1] = [0];
+        f.read_exact(&mut buf)?;
+        if buf[0].is_ascii() {
+            Ok(buf[0] as char)
+        } else {
+            Err(Error::InvalidHeader(format!(
+                "non-ASCII byte 0x{:02X} at offset {}",
+                buf[0], offset
+            )))
+        }
     }
-}
 
-fn get_string(f: &File, offset: u64, maxlen: u64) -> Result<String> {
-    let mut reader = std::io::BufReader::new(f);
-    reader.seek(SeekFrom::Start(offset))?;
-    let mut byte = reader.bytes();
-    let mut string_out = String::with_capacity(maxlen as usize);
+    fn read_f64(&self, offset: u64) -> Result<f64> {
+        let mut f = &self.file;
+        f.seek(SeekFrom::Start(offset))?;
+        let mut buf: [u8; 8] = [0; 8];
+        f.read_exact(&mut buf)?;
+        match self.endian {
+            Endian::Little => Ok(f64::from_le_bytes(buf)),
+            Endian::Big => Ok(f64::from_be_bytes(buf)),
+        }
+    }
 
-    for _ in 1..maxlen {
-        let b = byte.next();
+    fn read_f64vec(&self, daf_addr1: u64, daf_addr2: u64) -> Result<Vec<f64>> {
+        // DAF addresses are 1-indexed double-word (8-byte) indices
+        // daf_addr2 is inclusive, so we have (daf_addr2 - daf_addr1 + 1) elements
+        let num_elements = (daf_addr2 - daf_addr1 + 1) as usize;
+        let mut vectr = Vec::with_capacity(num_elements);
+        for daf_addr in daf_addr1..=daf_addr2 {
+            // Convert DAF address to byte offset: (N-1) * 8
+            let byte_offset = (daf_addr - 1) * 8;
+            vectr.push(self.read_f64(byte_offset)?);
+        }
+        Ok(vectr)
+    }
 
-        match b {
-            None => {
-                break; // if b none, end of string
-            }
-            Some(Err(error)) => {
-                return Err(Error::IO(error));
-            }
-            Some(Ok(0u8)) => {
-                // if \0, skip
-                continue;
-            }
-            Some(Ok(4u8)) => {
-                // end of transmission ascii char
-                break;
-            }
-            Some(Ok(c)) => {
-                if c.is_ascii() {
-                    // add to string and repeat
-                    string_out.push(c as char);
-                } else {
-                    // if not ascii, skip
-                    continue;
+    fn read_char(&self, offset: u64) -> Result<char> {
+        Self::read_char_at(&self.file, offset)
+    }
+
+    fn read_i32(&self, offset: u64) -> Result<i32> {
+        let mut f = &self.file;
+        f.seek(SeekFrom::Start(offset))?;
+        let mut buf: [u8; 4] = [0; 4];
+        f.read_exact(&mut buf)?;
+        match self.endian {
+            Endian::Little => Ok(i32::from_le_bytes(buf)),
+            Endian::Big => Ok(i32::from_be_bytes(buf)),
+        }
+    }
+
+    fn read_string(&self, offset: u64, maxlen: u64) -> Result<String> {
+        let mut reader = std::io::BufReader::new(&self.file);
+        reader.seek(SeekFrom::Start(offset))?;
+        let mut byte = reader.bytes();
+        let mut string_out = String::with_capacity(maxlen as usize);
+
+        for _ in 0..maxlen {
+            let b = byte.next();
+            match b {
+                None => break,
+                Some(Err(error)) => return Err(Error::IO(error)),
+                Some(Ok(0u8)) => continue,
+                Some(Ok(4u8)) => break,
+                Some(Ok(c)) => {
+                    if c.is_ascii() {
+                        string_out.push(c as char);
+                    }
                 }
-            }
-        };
+            };
+        }
+        Ok(string_out.trim().to_string())
     }
-    Ok(string_out.trim().to_string())
 }
 
 use serde::{Deserialize, Serialize};
@@ -195,14 +227,6 @@ pub enum Endian {
 }
 
 impl Endian {
-    fn from_daf_file(f: &File) -> Result<Endian> {
-        let endian_char = get_char(f, 88)?;
-        match endian_char {
-            'B' | 'b' => Ok(Endian::Big),
-            'L' | 'l' => Ok(Endian::Little),
-            _ => Err(Error::InvalidEndian { found: endian_char }),
-        }
-    }
 
     /// Returns the LOCFMT string for this endianness ("LTL-IEEE" or "BIG-IEEE")
     pub fn locfmt(&self) -> &'static str {
@@ -288,7 +312,7 @@ type SegReader = fn(&mut DAFFile, u64) -> Result<DAFSegment>;
 /// ```
 #[derive(Debug)]
 pub struct DAFFile {
-    file: File,
+    reader: DafReader,
     pub endian: Endian,
     daf_type: char,
     seg_reader: SegReader,
@@ -310,24 +334,25 @@ pub struct DAFFile {
 
 impl DAFFile {
     pub fn from_file(file: File) -> Result<DAFFile> {
-        let endian = Endian::from_daf_file(&file)?;
-        let daf_type = get_char(&file, 4)?;
-        let nd = get_i32(&file, 8, &endian)? as u64;
-        let ni = get_i32(&file, 12, &endian)? as u64;
-        let locifn = get_string(&file, 16, 60)?;
-        let fward = get_i32(&file, 76, &endian)? as u64;
-        let bward = get_i32(&file, 80, &endian)? as u64;
-        let free_address = get_i32(&file, 84, &endian)? as u64;
-        let ftpstr = get_string(&file, 699, 28)?;
-        let current_record = fward as u64;
+        let reader = DafReader::new(file)?;
+        let endian = reader.endian;
+        let daf_type = reader.read_char(DAF_OFFSET_TYPE)?;
+        let nd = reader.read_i32(DAF_OFFSET_ND)? as u64;
+        let ni = reader.read_i32(DAF_OFFSET_NI)? as u64;
+        let locifn = reader.read_string(DAF_OFFSET_LOCIFN, 60)?;
+        let fward = reader.read_i32(DAF_OFFSET_FWARD)? as u64;
+        let bward = reader.read_i32(DAF_OFFSET_BWARD)? as u64;
+        let free_address = reader.read_i32(DAF_OFFSET_FREE)? as u64;
+        let ftpstr = reader.read_string(DAF_OFFSET_FTPSTR, 28)?;
+        let current_record = fward;
 
-        let namerec_offset = 1024 * (bward - fward + 1) as u64;
+        let namerec_offset = 1024 * (bward - fward + 1);
         // DAF packs NI integers into ceil(NI/2) doubles, so summary size is (ND + ceil(NI/2)) * 8
-        let sum_size = 8 * (nd + ni.div_ceil(2)) as u64;
-        let nc = 8 * (nd + ni.div_ceil(2)) as u64;
+        let sum_size = 8 * (nd + ni.div_ceil(2));
+        let nc = 8 * (nd + ni.div_ceil(2));
 
-        let next_record = get_f64(&file, 1024 * (current_record - 1), &endian)? as u64;
-        let nsum = get_f64(&file, 1024 * (current_record - 1) + 16, &endian)? as u64;
+        let next_record = reader.read_f64(1024 * (current_record - 1))? as u64;
+        let nsum = reader.read_f64(1024 * (current_record - 1) + 16)? as u64;
 
         let current_segment: u64 = 0;
 
@@ -341,7 +366,7 @@ impl DAFFile {
         };
 
         Ok(DAFFile {
-            file,
+            reader,
             endian,
             daf_type,
             seg_reader,
@@ -363,23 +388,23 @@ impl DAFFile {
     }
 
     pub fn read_f64(&mut self, offset: u64) -> Result<f64> {
-        get_f64(&self.file, offset, &self.endian)
+        self.reader.read_f64(offset)
     }
 
     pub fn read_f64vec(&mut self, offset1: u64, offset2: u64) -> Result<Vec<f64>> {
-        get_f64vec(&self.file, offset1, offset2, &self.endian)
+        self.reader.read_f64vec(offset1, offset2)
     }
 
     pub fn read_char(&mut self, offset: u64) -> Result<char> {
-        get_char(&self.file, offset)
+        self.reader.read_char(offset)
     }
 
     pub fn read_i32(&mut self, offset: u64) -> Result<i32> {
-        get_i32(&self.file, offset, &self.endian)
+        self.reader.read_i32(offset)
     }
 
     pub fn read_string(&mut self, offset: u64, maxlen: u64) -> Result<String> {
-        get_string(&self.file, offset, maxlen)
+        self.reader.read_string(offset, maxlen)
     }
 
     pub fn comment(&mut self) -> Result<String> {
@@ -620,11 +645,11 @@ pub struct SPKSegment {
     /// End of coverage interval (TDB seconds past J2000)
     pub final_epoch: f64,
     /// NAIF ID of the target body
-    pub target_code: i32,
+    pub target_code: NaifId,
     /// NAIF ID of the center body (origin for position vectors)
-    pub center_code: i32,
+    pub center_code: NaifId,
     /// NAIF ID of the reference frame
-    pub frame_code: i32,
+    pub frame_code: NaifId,
     /// SPK segment type (1-21, determines data format)
     pub spk_type: i32,
     /// DAF address where segment data begins (1-indexed double-word)
@@ -639,16 +664,16 @@ pub struct SPKSegment {
 impl SPKSegment {
     fn reader(daf: &mut DAFFile, sumptr: u64) -> Result<DAFSegment> {
         let nameptr = sumptr + daf.namerec_offset;
-        let data_start = daf.read_i32(sumptr + 32)? as u64;
-        let data_end = daf.read_i32(sumptr + 36)? as u64;
+        let data_start = daf.read_i32(sumptr + SUMMARY_IC4)? as u64;
+        let data_end = daf.read_i32(sumptr + SUMMARY_IC5)? as u64;
         Ok(DAFSegment::SPK(SPKSegment {
             name: daf.read_string(nameptr, daf.nc)?,
-            initial_epoch: daf.read_f64(sumptr)?,
-            final_epoch: daf.read_f64(sumptr + 8)?,
-            target_code: daf.read_i32(sumptr + 16)?,
-            center_code: daf.read_i32(sumptr + 20)?,
-            frame_code: daf.read_i32(sumptr + 24)?,
-            spk_type: daf.read_i32(sumptr + 28)?,
+            initial_epoch: daf.read_f64(sumptr + SUMMARY_DC0)?,
+            final_epoch: daf.read_f64(sumptr + SUMMARY_DC1)?,
+            target_code: NaifId(daf.read_i32(sumptr + SUMMARY_IC0)?),
+            center_code: NaifId(daf.read_i32(sumptr + SUMMARY_IC1)?),
+            frame_code: NaifId(daf.read_i32(sumptr + SUMMARY_IC2)?),
+            spk_type: daf.read_i32(sumptr + SUMMARY_IC3)?,
             data_start,
             data_end,
             data: daf.read_f64vec(data_start, data_end)?,
@@ -669,9 +694,9 @@ pub struct CKSegment {
     /// End of coverage interval (encoded SCLK ticks)
     pub final_sclk: f64,
     /// NAIF ID of the instrument or structure
-    pub instrument_code: i32,
+    pub instrument_code: NaifId,
     /// NAIF ID of the reference frame
-    pub frame_code: i32,
+    pub frame_code: NaifId,
     /// CK segment type (1-6, determines data format)
     pub ck_type: i32,
     /// Whether angular velocity data is included
@@ -687,16 +712,16 @@ pub struct CKSegment {
 impl CKSegment {
     fn reader(daf: &mut DAFFile, sumptr: u64) -> Result<DAFSegment> {
         let nameptr = sumptr + daf.namerec_offset;
-        let data_start = daf.read_i32(sumptr + 32)? as u64;
-        let data_end = daf.read_i32(sumptr + 36)? as u64;
+        let data_start = daf.read_i32(sumptr + SUMMARY_IC4)? as u64;
+        let data_end = daf.read_i32(sumptr + SUMMARY_IC5)? as u64;
         Ok(DAFSegment::CK(CKSegment {
             name: daf.read_string(nameptr, daf.nc)?,
-            initial_sclk: daf.read_f64(sumptr)?,
-            final_sclk: daf.read_f64(sumptr + 8)?,
-            instrument_code: daf.read_i32(sumptr + 16)?,
-            frame_code: daf.read_i32(sumptr + 20)?,
-            ck_type: daf.read_i32(sumptr + 24)?,
-            rates: (daf.read_i32(sumptr + 28)? == 1),
+            initial_sclk: daf.read_f64(sumptr + SUMMARY_DC0)?,
+            final_sclk: daf.read_f64(sumptr + SUMMARY_DC1)?,
+            instrument_code: NaifId(daf.read_i32(sumptr + SUMMARY_IC0)?),
+            frame_code: NaifId(daf.read_i32(sumptr + SUMMARY_IC1)?),
+            ck_type: daf.read_i32(sumptr + SUMMARY_IC2)?,
+            rates: (daf.read_i32(sumptr + SUMMARY_IC3)? == 1),
             data_start,
             data_end,
             data: daf.read_f64vec(data_start, data_end)?,
@@ -717,9 +742,9 @@ pub struct BPCKSegment {
     /// End of coverage interval (TDB seconds past J2000)
     pub final_epoch: f64,
     /// NAIF frame ID for the body-fixed frame being defined
-    pub frame_id: i32,
+    pub frame_id: NaifId,
     /// NAIF frame ID of the base/inertial reference frame
-    pub base_frame: i32,
+    pub base_frame: NaifId,
     /// BPCK segment type (determines data format)
     pub bpck_type: i32,
     /// DAF address where segment data begins (1-indexed double-word)
@@ -733,15 +758,15 @@ pub struct BPCKSegment {
 impl BPCKSegment {
     fn reader(daf: &mut DAFFile, sumptr: u64) -> Result<DAFSegment> {
         let nameptr = sumptr + daf.namerec_offset;
-        let data_start = daf.read_i32(sumptr + 28)? as u64;
-        let data_end = daf.read_i32(sumptr + 32)? as u64;
+        let data_start = daf.read_i32(sumptr + SUMMARY_IC3)? as u64;
+        let data_end = daf.read_i32(sumptr + SUMMARY_IC4)? as u64;
         Ok(DAFSegment::BPCK(BPCKSegment {
             name: daf.read_string(nameptr, daf.nc)?,
-            initial_epoch: daf.read_f64(sumptr)?,
-            final_epoch: daf.read_f64(sumptr + 8)?,
-            frame_id: daf.read_i32(sumptr + 16)?,
-            base_frame: daf.read_i32(sumptr + 20)?,
-            bpck_type: daf.read_i32(sumptr + 24)?,
+            initial_epoch: daf.read_f64(sumptr + SUMMARY_DC0)?,
+            final_epoch: daf.read_f64(sumptr + SUMMARY_DC1)?,
+            frame_id: NaifId(daf.read_i32(sumptr + SUMMARY_IC0)?),
+            base_frame: NaifId(daf.read_i32(sumptr + SUMMARY_IC1)?),
+            bpck_type: daf.read_i32(sumptr + SUMMARY_IC2)?,
             data_start,
             data_end,
             data: daf.read_f64vec(data_start, data_end)?,
@@ -788,42 +813,49 @@ mod tests {
     use std::io::{Seek, Write};
     use tempfile::tempfile;
 
+    fn make_reader(file: File, endian: Endian) -> DafReader {
+        DafReader { file, endian }
+    }
+
     /// Test f64 reading with little endian
     #[test]
-    fn test_get_f64_little_endian() {
+    fn test_read_f64_little_endian() {
         let mut file = tempfile().expect("Could not create temp file");
         let value: f64 = 123.456;
         file.write_all(&value.to_le_bytes())
             .expect("Could not write");
         file.seek(SeekFrom::Start(0)).expect("Could not seek");
 
-        let result = get_f64(&file, 0, &Endian::Little).expect("Failed to read f64");
+        let reader = make_reader(file, Endian::Little);
+        let result = reader.read_f64(0).expect("Failed to read f64");
         assert!((result - value).abs() < 1e-10, "Little endian f64 mismatch");
     }
 
     /// Test f64 reading with big endian
     #[test]
-    fn test_get_f64_big_endian() {
+    fn test_read_f64_big_endian() {
         let mut file = tempfile().expect("Could not create temp file");
         let value: f64 = 789.012;
         file.write_all(&value.to_be_bytes())
             .expect("Could not write");
         file.seek(SeekFrom::Start(0)).expect("Could not seek");
 
-        let result = get_f64(&file, 0, &Endian::Big).expect("Failed to read f64");
+        let reader = make_reader(file, Endian::Big);
+        let result = reader.read_f64(0).expect("Failed to read f64");
         assert!((result - value).abs() < 1e-10, "Big endian f64 mismatch");
     }
 
     /// Test i32 reading with both endians
     #[test]
-    fn test_get_i32_conversion() {
+    fn test_read_i32_conversion() {
         let mut file = tempfile().expect("Could not create temp file");
         let value: i32 = 42;
         file.write_all(&value.to_le_bytes())
             .expect("Could not write");
         file.seek(SeekFrom::Start(0)).expect("Could not seek");
 
-        let result = get_i32(&file, 0, &Endian::Little).expect("Failed to read i32");
+        let reader = make_reader(file, Endian::Little);
+        let result = reader.read_i32(0).expect("Failed to read i32");
         assert_eq!(result, value, "Little endian i32 mismatch");
 
         // Test big endian
@@ -833,7 +865,8 @@ mod tests {
             .expect("Could not write");
         file2.seek(SeekFrom::Start(0)).expect("Could not seek");
 
-        let result2 = get_i32(&file2, 0, &Endian::Big).expect("Failed to read i32");
+        let reader2 = make_reader(file2, Endian::Big);
+        let result2 = reader2.read_i32(0).expect("Failed to read i32");
         assert_eq!(result2, value, "Big endian i32 mismatch");
     }
 
@@ -846,7 +879,8 @@ mod tests {
         file.write_all(data).expect("Could not write");
         file.seek(SeekFrom::Start(0)).expect("Could not seek");
 
-        let result = get_string(&file, 0, 10).expect("Failed to read string");
+        let reader = make_reader(file, Endian::Little);
+        let result = reader.read_string(0, 10).expect("Failed to read string");
         assert_eq!(result, "HELLO", "String parsing mismatch");
     }
 

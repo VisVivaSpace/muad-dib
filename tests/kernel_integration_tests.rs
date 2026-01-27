@@ -192,7 +192,7 @@ fn test_segment_iteration_and_filtering() {
     // All returned segments should match the target
     for seg in &filtered {
         assert_eq!(
-            NaifId(seg.target_code),
+            seg.target_code,
             target,
             "Filtered segment should have target_code matching filter"
         );

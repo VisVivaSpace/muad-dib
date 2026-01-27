@@ -158,29 +158,39 @@ impl LeapSecondData {
 pub trait LeapSecondExt {
     /// Extract leap second data from loaded kernels.
     ///
-    /// Returns `None` if no LSK data is available.
-    fn lsk_data(&self) -> Option<LeapSecondData>;
+    /// Returns `Err(MissingLskData)` if required LSK variables are not available.
+    fn lsk_data(&self) -> Result<LeapSecondData>;
 
     /// Check if leap second data is available.
     fn has_lsk(&self) -> bool;
 }
 
 impl LeapSecondExt for SpiceKernel {
-    fn lsk_data(&self) -> Option<LeapSecondData> {
+    fn lsk_data(&self) -> Result<LeapSecondData> {
         // Get the required DELTET variables
-        let delta_t_a = self.get_f64_scalar("DELTET/DELTA_T_A")?;
-        let k = self.get_f64_scalar("DELTET/K")?;
-        let eb = self.get_f64_scalar("DELTET/EB")?;
-        let m_values = self.get_f64("DELTET/M")?;
+        let delta_t_a = self
+            .get_f64_scalar("DELTET/DELTA_T_A")
+            .ok_or(Error::MissingLskData)?;
+        let k = self
+            .get_f64_scalar("DELTET/K")
+            .ok_or(Error::MissingLskData)?;
+        let eb = self
+            .get_f64_scalar("DELTET/EB")
+            .ok_or(Error::MissingLskData)?;
+        let m_values = self
+            .get_f64("DELTET/M")
+            .ok_or(Error::MissingLskData)?;
 
         if m_values.len() < 2 {
-            return None;
+            return Err(Error::MissingLskData);
         }
 
         let m = [m_values[0], m_values[1]];
 
         // Parse DELTET/DELTA_AT - alternating (TAI-UTC, epoch) pairs
-        let delta_at_var = self.pck_lookup("DELTET/DELTA_AT")?;
+        let delta_at_var = self
+            .pck_lookup("DELTET/DELTA_AT")
+            .ok_or(Error::MissingLskData)?;
 
         let mut leap_seconds = Vec::new();
         let values = &delta_at_var.values;
@@ -205,10 +215,9 @@ impl LeapSecondExt for SpiceKernel {
                 }
             };
 
-            // Parse the epoch string to TDB
-            if let Ok(epoch) = parse_lsk_epoch(&epoch_str) {
-                leap_seconds.push((delta, epoch));
-            }
+            // Parse the epoch string to TDB — propagate errors instead of silently skipping
+            let epoch = parse_lsk_epoch(&epoch_str)?;
+            leap_seconds.push((delta, epoch));
 
             i += 2;
         }
@@ -216,7 +225,7 @@ impl LeapSecondExt for SpiceKernel {
         // Sort by epoch
         leap_seconds.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
 
-        Some(LeapSecondData {
+        Ok(LeapSecondData {
             delta_t_a,
             k,
             eb,
@@ -267,7 +276,7 @@ fn parse_lsk_epoch(s: &str) -> Result<f64> {
 /// let tdb = utc_to_tdb(&kernel, "2020-01-01T00:00:00")?;
 /// ```
 pub fn utc_to_tdb(kernel: &SpiceKernel, utc_str: &str) -> Result<EpochTDB> {
-    let lsk = kernel.lsk_data().ok_or(Error::MissingLskData)?;
+    let lsk = kernel.lsk_data()?;
 
     // Parse the UTC string to get "raw" seconds (treating it as TDB for parsing)
     let utc_parsed = EpochTDB::parse(utc_str)?;
@@ -302,7 +311,7 @@ pub fn utc_to_tdb(kernel: &SpiceKernel, utc_str: &str) -> Result<EpochTDB> {
 /// // Returns approximately "2000-01-01T11:58:55" (J2000 in UTC)
 /// ```
 pub fn tdb_to_utc(kernel: &SpiceKernel, tdb: EpochTDB, format: TimeFormat) -> Result<String> {
-    let lsk = kernel.lsk_data().ok_or(Error::MissingLskData)?;
+    let lsk = kernel.lsk_data()?;
 
     // Convert TDB to UTC seconds
     let utc_seconds = lsk.tdb_to_utc_seconds(tdb.0);

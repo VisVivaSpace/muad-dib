@@ -185,11 +185,11 @@ fn write_summary_record(
         offset += 8;
         write_f64_to_buf(&mut record[offset..offset + 8], seg.final_epoch, endian);
         offset += 8;
-        write_i32_to_buf(&mut record[offset..offset + 4], seg.target_code, endian);
+        write_i32_to_buf(&mut record[offset..offset + 4], seg.target_code.0, endian);
         offset += 4;
-        write_i32_to_buf(&mut record[offset..offset + 4], seg.center_code, endian);
+        write_i32_to_buf(&mut record[offset..offset + 4], seg.center_code.0, endian);
         offset += 4;
-        write_i32_to_buf(&mut record[offset..offset + 4], seg.frame_code, endian);
+        write_i32_to_buf(&mut record[offset..offset + 4], seg.frame_code.0, endian);
         offset += 4;
         write_i32_to_buf(&mut record[offset..offset + 4], seg.spk_type, endian);
         offset += 4;

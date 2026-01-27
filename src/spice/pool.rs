@@ -78,7 +78,19 @@ impl KernelPoolExt for SpiceKernel {
 
     fn get_i32(&self, name: &str) -> Option<Vec<i32>> {
         let floats = self.get_f64(name)?;
-        Some(floats.into_iter().map(|f| f as i32).collect())
+        Some(
+            floats
+                .into_iter()
+                .map(|f| {
+                    debug_assert!(
+                        f >= i32::MIN as f64 && f <= i32::MAX as f64,
+                        "kernel pool f64 value {} out of i32 range",
+                        f
+                    );
+                    f as i32
+                })
+                .collect(),
+        )
     }
 
     fn get_i32_scalar(&self, name: &str) -> Option<i32> {

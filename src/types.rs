@@ -152,6 +152,7 @@ impl fmt::Display for Sclk {
 /// - Moons: x0y (e.g., 301 = Moon)
 /// - Spacecraft: negative (e.g., -82 = Cassini)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+#[serde(transparent)]
 pub struct NaifId(pub i32);
 
 impl NaifId {

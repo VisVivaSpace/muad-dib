@@ -141,21 +141,21 @@ fn validate_segment_summaries_match_anise() {
 
         // Compare target ID
         assert_eq!(
-            spk.target_code, anise_sum.target_id,
+            spk.target_code.0, anise_sum.target_id,
             "Segment {}: target_id mismatch: despice={}, anise={}",
             i, spk.target_code, anise_sum.target_id
         );
 
         // Compare center ID
         assert_eq!(
-            spk.center_code, anise_sum.center_id,
+            spk.center_code.0, anise_sum.center_id,
             "Segment {}: center_id mismatch: despice={}, anise={}",
             i, spk.center_code, anise_sum.center_id
         );
 
         // Compare frame ID
         assert_eq!(
-            spk.frame_code, anise_sum.frame_id,
+            spk.frame_code.0, anise_sum.frame_id,
             "Segment {}: frame_id mismatch: despice={}, anise={}",
             i, spk.frame_code, anise_sum.frame_id
         );

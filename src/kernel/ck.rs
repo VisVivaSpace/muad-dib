@@ -60,11 +60,11 @@ impl<'a> CkSegmentView<'a> {
 
     /// Get the instrument NAIF ID.
     pub fn instrument(&self) -> NaifId {
-        NaifId(self.segment.instrument_code)
+        self.segment.instrument_code
     }
 
-    /// Get the reference frame code.
-    pub fn frame(&self) -> i32 {
+    /// Get the reference frame NAIF ID.
+    pub fn frame(&self) -> NaifId {
         self.segment.frame_code
     }
 
@@ -135,8 +135,8 @@ mod tests {
             name: "TEST CK SEGMENT".to_string(),
             initial_sclk: 1000.0,
             final_sclk: 2000.0,
-            instrument_code: -82000,
-            frame_code: 1,
+            instrument_code: NaifId(-82000),
+            frame_code: NaifId(1),
             ck_type: 1,
             rates: false,
             data_start: 1,
@@ -159,7 +159,7 @@ mod tests {
 
         assert_eq!(view.name(), "TEST CK SEGMENT");
         assert_eq!(view.instrument(), NaifId(-82000));
-        assert_eq!(view.frame(), 1);
+        assert_eq!(view.frame(), NaifId(1));
         assert_eq!(view.ck_type(), 1);
         assert!(!view.has_rates());
         assert_eq!(view.initial_sclk(), 1000.0);

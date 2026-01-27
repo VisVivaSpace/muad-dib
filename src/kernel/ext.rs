@@ -39,12 +39,12 @@ impl<'a, I: Iterator<Item = &'a DAFSegment>> DAFSegmentIteratorExt<'a> for I {}
 pub trait SpkIteratorExt<'a>: Iterator<Item = &'a SPKSegment> + Sized {
     /// Filter to segments for a specific target body.
     fn for_target(self, target: NaifId) -> impl Iterator<Item = &'a SPKSegment> {
-        self.filter(move |spk| spk.target_code == target.0)
+        self.filter(move |spk| spk.target_code == target)
     }
 
     /// Filter to segments for a specific center body.
     fn for_center(self, center: NaifId) -> impl Iterator<Item = &'a SPKSegment> {
-        self.filter(move |spk| spk.center_code == center.0)
+        self.filter(move |spk| spk.center_code == center)
     }
 
     /// Filter to segments covering a specific epoch.
@@ -64,7 +64,7 @@ impl<'a, I: Iterator<Item = &'a SPKSegment>> SpkIteratorExt<'a> for I {}
 pub trait CkIteratorExt<'a>: Iterator<Item = &'a CKSegment> + Sized {
     /// Filter to segments for a specific instrument.
     fn for_instrument(self, instrument: NaifId) -> impl Iterator<Item = &'a CKSegment> {
-        self.filter(move |ck| ck.instrument_code == instrument.0)
+        self.filter(move |ck| ck.instrument_code == instrument)
     }
 
     /// Filter to segments covering a specific SCLK time.
@@ -106,7 +106,7 @@ impl DAFSourceExt for DAFSource {
             .segments
             .iter()
             .filter_map(|seg| match seg {
-                DAFSegment::SPK(spk) => Some(NaifId(spk.target_code)),
+                DAFSegment::SPK(spk) => Some(spk.target_code),
                 _ => None,
             })
             .collect();
@@ -120,7 +120,7 @@ impl DAFSourceExt for DAFSource {
             .segments
             .iter()
             .filter_map(|seg| match seg {
-                DAFSegment::CK(ck) => Some(NaifId(ck.instrument_code)),
+                DAFSegment::CK(ck) => Some(ck.instrument_code),
                 _ => None,
             })
             .collect();
@@ -134,7 +134,7 @@ impl DAFSourceExt for DAFSource {
             .segments
             .iter()
             .filter_map(|seg| match seg {
-                DAFSegment::BPCK(bpck) => Some(NaifId(bpck.frame_id)),
+                DAFSegment::BPCK(bpck) => Some(bpck.frame_id),
                 _ => None,
             })
             .collect();
@@ -187,9 +187,9 @@ mod tests {
                     name: "Earth".to_string(),
                     initial_epoch: 0.0,
                     final_epoch: 86400.0,
-                    target_code: 399,
-                    center_code: 3,
-                    frame_code: 1,
+                    target_code: NaifId(399),
+                    center_code: NaifId(3),
+                    frame_code: NaifId(1),
                     spk_type: 2,
                     data_start: 1,
                     data_end: 10,
@@ -199,9 +199,9 @@ mod tests {
                     name: "Mars".to_string(),
                     initial_epoch: 0.0,
                     final_epoch: 86400.0,
-                    target_code: 499,
-                    center_code: 4,
-                    frame_code: 1,
+                    target_code: NaifId(499),
+                    center_code: NaifId(4),
+                    frame_code: NaifId(1),
                     spk_type: 2,
                     data_start: 11,
                     data_end: 20,
