@@ -8,7 +8,7 @@ use anise::naif::spk::summary::SPKSummaryRecord;
 use muad_dib::{DAFFile, DAFSegment, Endian};
 use std::fs::File;
 
-const TEST_FILE: &str = "test.bsp";
+const TEST_FILE: &str = "test_data/test.bsp";
 
 /// Get the actual number of valid summaries from anise's DAF.
 ///

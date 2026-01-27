@@ -12,7 +12,7 @@ use muad_dib::hdf5_output::DAFSource;
 use muad_dib::{DAFFile, DAFSegment};
 use std::fs::File;
 
-const TEST_FILE: &str = "test.bsp";
+const TEST_FILE: &str = "test_data/test.bsp";
 
 /// Helper to create a DAFSource from test file
 fn load_test_source() -> DAFSource {

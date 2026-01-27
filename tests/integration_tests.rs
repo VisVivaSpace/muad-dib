@@ -1,7 +1,7 @@
 use muad_dib::{DAFFile, DAFSegment};
 use std::fs::File;
 
-const TEST_FILE: &str = "test.bsp";
+const TEST_FILE: &str = "test_data/test.bsp";
 
 #[test]
 fn test_open_spk_file() {

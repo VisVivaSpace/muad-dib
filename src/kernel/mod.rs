@@ -349,7 +349,7 @@ mod tests {
     #[test]
     fn test_doc_example_basic_usage() {
         // Mirrors the "Basic Usage" doc example
-        let kernel = SpiceKernel::load("test.bsp").unwrap();
+        let kernel = SpiceKernel::load("test_data/test.bsp").unwrap();
 
         // Query bodies with coverage
         for body in kernel.spk_bodies() {
@@ -360,7 +360,7 @@ mod tests {
     #[test]
     fn test_doc_example_type_specific_access() {
         // Mirrors the "Type-Specific Data Access" doc example
-        let kernel = SpiceKernel::load("test.bsp").unwrap();
+        let kernel = SpiceKernel::load("test_data/test.bsp").unwrap();
 
         for body in kernel.spk_bodies() {
             for view in kernel.spk_views_for(body) {

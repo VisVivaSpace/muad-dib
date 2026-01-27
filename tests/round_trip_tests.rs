@@ -11,7 +11,7 @@ use muad_dib::spk_writer::write_spk;
 use muad_dib::{DAFFile, DAFSegment};
 use std::fs::File;
 
-const TEST_FILE: &str = "test.bsp";
+const TEST_FILE: &str = "test_data/test.bsp";
 
 /// Test that we can convert SPK to HDF5 and back, preserving segment count and metadata.
 #[test]

@@ -447,22 +447,22 @@ pub fn test_file_path(filename: &str) -> String {
 
 /// Get path to naif0012.tls
 pub fn lsk_path() -> String {
-    test_file_path("naif0012.tls")
+    test_file_path("test_data/naif0012.tls")
 }
 
 /// Get path to test.bsp
 pub fn spk_path() -> String {
-    test_file_path("test.bsp")
+    test_file_path("test_data/test.bsp")
 }
 
 /// Get path to test.bc
 pub fn ck_path() -> String {
-    test_file_path("test.bc")
+    test_file_path("test_data/test.bc")
 }
 
 /// Get path to test.tpc
 pub fn tpc_path() -> String {
-    test_file_path("test.tpc")
+    test_file_path("test_data/test.tpc")
 }
 
 // ============================================================================
