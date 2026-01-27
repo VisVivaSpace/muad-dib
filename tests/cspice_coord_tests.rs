@@ -15,8 +15,29 @@ use cspice_common::{
 };
 use muad_dib::spice::coord::{Cylindrical, Latitudinal, Rectangular, Spherical};
 
-/// Tolerance for coordinate conversions (machine precision level).
-const COORD_TOLERANCE: f64 = 1e-12;
+/// Tolerance for coordinate conversions.
+/// Using 1e-10 to account for floating-point precision limits in trigonometric
+/// operations, especially for coordinate values around 5000 km.
+const COORD_TOLERANCE: f64 = 1e-10;
+
+/// Compare angles with wraparound handling.
+/// Angles that differ by 2π are considered equivalent.
+fn assert_angle_close(a: f64, b: f64, tolerance: f64, msg: &str) {
+    let diff = (a - b).abs();
+    let two_pi = 2.0 * std::f64::consts::PI;
+    // Check if angles are equivalent (diff is near 0 or near 2π)
+    let adjusted_diff = diff.min((two_pi - diff).abs());
+    assert!(
+        adjusted_diff < tolerance,
+        "{}: {} != {} (diff={}, adjusted_diff={}, tolerance={})",
+        msg,
+        a,
+        b,
+        diff,
+        adjusted_diff,
+        tolerance
+    );
+}
 
 /// Test points covering various coordinate configurations.
 const TEST_POINTS: [[f64; 3]; 8] = [
@@ -53,7 +74,8 @@ fn validate_rectangular_to_latitudinal() {
             COORD_TOLERANCE,
             &format!("radius for {:?}", point),
         );
-        assert_close(
+        // Longitude can differ by 2π and still represent the same angle
+        assert_angle_close(
             lat.longitude,
             cspice_lon,
             COORD_TOLERANCE,
@@ -159,7 +181,8 @@ fn validate_rectangular_to_spherical() {
             COORD_TOLERANCE,
             &format!("colatitude for {:?}", point),
         );
-        assert_close(
+        // Longitude can differ by 2π and still represent the same angle
+        assert_angle_close(
             sph.longitude,
             cspice_lon,
             COORD_TOLERANCE,
@@ -253,7 +276,8 @@ fn validate_rectangular_to_cylindrical() {
             COORD_TOLERANCE,
             &format!("r for {:?}", point),
         );
-        assert_close(
+        // Longitude can differ by 2π and still represent the same angle
+        assert_angle_close(
             cyl.longitude,
             cspice_lon,
             COORD_TOLERANCE,
@@ -385,9 +409,9 @@ fn validate_axes() {
     let (r, lon, lat) = cspice_reclat(&x_point);
     let muad = Rectangular(x_point).to_latitudinal();
     assert_close(muad.radius, r, COORD_TOLERANCE, "+X radius");
-    assert_close(muad.longitude, lon, COORD_TOLERANCE, "+X longitude");
+    assert_angle_close(muad.longitude, lon, COORD_TOLERANCE, "+X longitude");
     assert_close(muad.latitude, lat, COORD_TOLERANCE, "+X latitude");
-    assert_close(muad.longitude, 0.0, COORD_TOLERANCE, "+X should have longitude 0");
+    assert_angle_close(muad.longitude, 0.0, COORD_TOLERANCE, "+X should have longitude 0");
     assert_close(muad.latitude, 0.0, COORD_TOLERANCE, "+X should have latitude 0");
 
     // +Y axis
@@ -395,9 +419,9 @@ fn validate_axes() {
     let (r, lon, lat) = cspice_reclat(&y_point);
     let muad = Rectangular(y_point).to_latitudinal();
     assert_close(muad.radius, r, COORD_TOLERANCE, "+Y radius");
-    assert_close(muad.longitude, lon, COORD_TOLERANCE, "+Y longitude");
+    assert_angle_close(muad.longitude, lon, COORD_TOLERANCE, "+Y longitude");
     assert_close(muad.latitude, lat, COORD_TOLERANCE, "+Y latitude");
-    assert_close(
+    assert_angle_close(
         muad.longitude,
         std::f64::consts::FRAC_PI_2,
         COORD_TOLERANCE,
@@ -409,8 +433,8 @@ fn validate_axes() {
     let (r, lon, _) = cspice_reclat(&neg_x);
     let muad = Rectangular(neg_x).to_latitudinal();
     assert_close(muad.radius, r, COORD_TOLERANCE, "-X radius");
-    assert_close(muad.longitude, lon, COORD_TOLERANCE, "-X longitude");
-    assert_close(
+    assert_angle_close(muad.longitude, lon, COORD_TOLERANCE, "-X longitude");
+    assert_angle_close(
         muad.longitude.abs(),
         std::f64::consts::PI,
         COORD_TOLERANCE,

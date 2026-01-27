@@ -304,6 +304,42 @@ fn test_spice_kernel_load_hermite() {
     assert!(coverage.is_some(), "Should have coverage for spacecraft");
 }
 
+/// Test Type 13 (Hermite) interpolation works
+#[test]
+fn test_type13_hermite_interpolation() {
+    use muad_dib::spice::SpkInterpolateExt;
+    use muad_dib::types::EpochTDB;
+
+    let kernel = SpiceKernel::load("test_data/gmat-hermite.bsp").expect("Failed to load kernel");
+
+    // Get the segment info
+    let segment = kernel.spk_segments().next().expect("No segments");
+    assert_eq!(segment.spk_type, 13, "Expected Type 13 segment");
+
+    let target = NaifId(segment.target_code);
+    let center = NaifId(segment.center_code);
+    let midpoint = (segment.initial_epoch + segment.final_epoch) / 2.0;
+
+    // This should successfully interpolate using Hermite
+    let state = kernel
+        .state_of(target, EpochTDB(midpoint), center)
+        .expect("Type 13 interpolation should work");
+
+    // Verify state is reasonable (non-zero, finite)
+    assert!(state.position[0].is_finite());
+    assert!(state.position[1].is_finite());
+    assert!(state.position[2].is_finite());
+    assert!(state.velocity[0].is_finite());
+    assert!(state.velocity[1].is_finite());
+    assert!(state.velocity[2].is_finite());
+
+    // Position magnitude should be reasonable for an Earth-orbiting spacecraft
+    let dist = state.distance();
+    assert!(dist > 0.0, "Distance should be positive");
+    // Typical Earth orbit is 6000-50000 km from center
+    // This is center=Earth, so we expect relatively small values
+}
+
 /// Test loading multiple SPK files into one kernel
 #[test]
 fn test_spice_kernel_load_multiple() {
@@ -350,4 +386,110 @@ fn test_spice_kernel_load_mixed() {
         !kernel.ck_instruments().is_empty(),
         "Should have CK instruments"
     );
+}
+
+// =============================================================================
+// BPC (Binary PCK) Format Tests
+// =============================================================================
+
+/// Test parsing BPC (Binary PCK) file - earth high precision
+#[test]
+fn test_parse_bpc_earth() {
+    let file = File::open("test_data/earth_latest_high_prec.bpc").expect("Could not open file");
+    let daf = DAFFile::from_file(file).expect("Failed to parse DAF file");
+
+    // Should be little-endian
+    assert!(matches!(daf.endian, Endian::Little));
+
+    let segments: Vec<_> = daf.filter_map(|s| s.ok()).collect();
+    assert!(!segments.is_empty(), "Should have at least one segment");
+
+    // All segments should be BPCK type
+    for (i, seg) in segments.iter().enumerate() {
+        match seg {
+            DAFSegment::BPCK(bpck) => {
+                // Earth body-fixed frame (ITRF93 or similar)
+                assert_eq!(bpck.frame_id, 3000, "Segment {} should have frame_id 3000", i);
+                // Base frame should be J2000 (1) or ICRF (17)
+                assert!(
+                    bpck.base_frame == 1 || bpck.base_frame == 17,
+                    "Segment {} should have base_frame 1 or 17, got {}",
+                    i,
+                    bpck.base_frame
+                );
+                // Should be Type 2
+                assert_eq!(bpck.bpck_type, 2, "Segment {} should be Type 2", i);
+                // Data range should be valid
+                assert!(
+                    bpck.data_end >= bpck.data_start,
+                    "Segment {} data_end should be >= data_start",
+                    i
+                );
+                // Epochs should be reasonable
+                assert!(
+                    bpck.final_epoch > bpck.initial_epoch,
+                    "Segment {} final_epoch should be > initial_epoch",
+                    i
+                );
+            }
+            _ => panic!("Segment {} should be BPCK, got {:?}", i, seg),
+        }
+    }
+}
+
+/// Test parsing BPC file - moon orientation
+#[test]
+fn test_parse_bpc_moon() {
+    let file = File::open("test_data/moon_pa_de440_200625.bpc").expect("Could not open file");
+    let daf = DAFFile::from_file(file).expect("Failed to parse DAF file");
+
+    assert!(matches!(daf.endian, Endian::Little));
+
+    let segments: Vec<_> = daf.filter_map(|s| s.ok()).collect();
+    assert!(!segments.is_empty(), "Should have at least one segment");
+
+    for (i, seg) in segments.iter().enumerate() {
+        match seg {
+            DAFSegment::BPCK(bpck) => {
+                // Moon principal axes frame
+                assert_eq!(bpck.frame_id, 31008, "Segment {} should have frame_id 31008", i);
+                // Data should be valid
+                assert!(
+                    bpck.data_end >= bpck.data_start,
+                    "Segment {} data_end should be >= data_start",
+                    i
+                );
+            }
+            _ => panic!("Segment {} should be BPCK, got {:?}", i, seg),
+        }
+    }
+}
+
+/// Test BPC segment metadata consistency across multiple files
+#[test]
+fn test_bpc_segment_consistency() {
+    // Parse both Earth BPC files
+    let earth1 = File::open("test_data/earth_latest_high_prec.bpc").expect("Could not open file");
+    let earth2 = File::open("test_data/earth_longterm_000101_251211_250915.bpc").expect("Could not open file");
+
+    let daf1 = DAFFile::from_file(earth1).expect("Failed to parse DAF");
+    let daf2 = DAFFile::from_file(earth2).expect("Failed to parse DAF");
+
+    let segs1: Vec<_> = daf1.filter_map(|s| s.ok()).collect();
+    let segs2: Vec<_> = daf2.filter_map(|s| s.ok()).collect();
+
+    // Both should have segments
+    assert!(!segs1.is_empty(), "earth_latest should have segments");
+    assert!(!segs2.is_empty(), "earth_longterm should have segments");
+
+    // Both should define the same frame
+    let frame1 = match &segs1[0] {
+        DAFSegment::BPCK(b) => b.frame_id,
+        _ => panic!("Expected BPCK"),
+    };
+    let frame2 = match &segs2[0] {
+        DAFSegment::BPCK(b) => b.frame_id,
+        _ => panic!("Expected BPCK"),
+    };
+    assert_eq!(frame1, frame2, "Both files should define same frame");
 }

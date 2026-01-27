@@ -23,7 +23,7 @@ static CSPICE_LOCK: Mutex<()> = Mutex::new(());
 fn test_file_path() -> String {
     std::env::current_dir()
         .expect("Could not get current directory")
-        .join("test.bsp")
+        .join("test_data/test.bsp")
         .to_string_lossy()
         .into_owned()
 }

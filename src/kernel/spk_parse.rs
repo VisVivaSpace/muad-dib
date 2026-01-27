@@ -308,6 +308,7 @@ fn parse_type8(data: &[f64]) -> Option<SpkData> {
 /// Epoch 2
 /// ...
 /// Epoch N
+/// Epoch directory (floor((N-1)/100) elements, if N > 100)
 /// WINDOW_SIZE - Number of states for interpolation
 /// N           - Number of states
 /// ```
@@ -325,14 +326,16 @@ fn parse_type9(data: &[f64]) -> Option<SpkData> {
     }
 
     let state_size = 6;
-    let expected_data = num_states * state_size + num_states + 2; // states + epochs + directory
+    // Epoch directory size: floor((N-1)/100) elements when N > 100
+    let epoch_dir_size = if num_states > 100 { (num_states - 1) / 100 } else { 0 };
+    let expected_data = num_states * state_size + num_states + epoch_dir_size + 2;
     if data.len() < expected_data {
         return None;
     }
 
-    // Read epochs (after states, before directory)
+    // Read epochs (after states, before epoch directory and final directory)
     let epochs_start = num_states * state_size;
-    let epochs_end = n - 2;
+    let epochs_end = epochs_start + num_states;
     let epochs: Vec<f64> = data[epochs_start..epochs_end].to_vec();
 
     if epochs.len() != num_states {
@@ -366,6 +369,7 @@ fn parse_type9(data: &[f64]) -> Option<SpkData> {
 /// Parse SPK Type 13 segment data.
 ///
 /// Type 13 has the same layout as Type 9 but uses Hermite interpolation.
+/// Includes an epoch directory when N > 100.
 fn parse_type13(data: &[f64]) -> Option<SpkData> {
     if data.len() < 2 {
         return None;
@@ -380,13 +384,16 @@ fn parse_type13(data: &[f64]) -> Option<SpkData> {
     }
 
     let state_size = 6;
-    let expected_data = num_states * state_size + num_states + 2;
+    // Epoch directory size: floor((N-1)/100) elements when N > 100
+    let epoch_dir_size = if num_states > 100 { (num_states - 1) / 100 } else { 0 };
+    let expected_data = num_states * state_size + num_states + epoch_dir_size + 2;
     if data.len() < expected_data {
         return None;
     }
 
+    // Read epochs (after states, before epoch directory and final directory)
     let epochs_start = num_states * state_size;
-    let epochs_end = n - 2;
+    let epochs_end = epochs_start + num_states;
     let epochs: Vec<f64> = data[epochs_start..epochs_end].to_vec();
 
     if epochs.len() != num_states {

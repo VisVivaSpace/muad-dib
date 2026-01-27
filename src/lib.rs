@@ -332,7 +332,8 @@ impl DAFFile {
         let current_record = fward as u64;
 
         let namerec_offset = 1024 * (bward - fward + 1) as u64;
-        let sum_size = (8 * nd + 4 * ni) as u64;
+        // DAF packs NI integers into ceil(NI/2) doubles, so summary size is (ND + ceil(NI/2)) * 8
+        let sum_size = 8 * (nd + ni.div_ceil(2)) as u64;
         let nc = 8 * (nd + ni.div_ceil(2)) as u64;
 
         let next_record = get_f64(&file, 1024 * (current_record - 1), &endian)? as u64;

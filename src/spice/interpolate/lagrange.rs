@@ -72,6 +72,10 @@ fn lagrange_interpolate(x_values: &[f64], y_values: &[f64], x: f64) -> f64 {
 /// Select the interpolation window for Type 8 (equally spaced).
 ///
 /// Returns the indices of states to use for interpolation.
+///
+/// This implements the CSPICE algorithm from spkr08.c:
+/// - For ODD window size: center around the NEAREST epoch to the query
+/// - For EVEN window size: use the LOWER bracketing epoch
 fn select_window_type8(data: &Spk8Data, epoch: f64) -> Result<(usize, usize)> {
     let n = data.states.len();
     if n == 0 {
@@ -92,30 +96,61 @@ fn select_window_type8(data: &Spk8Data, epoch: f64) -> Result<(usize, usize)> {
         });
     }
 
-    // Find the index of the state just before or at the epoch
-    let raw_idx = ((epoch - data.start_epoch) / data.step_size).floor() as usize;
+    // Find the bracketing indices (lower and high)
+    let normalized = (epoch - data.start_epoch) / data.step_size;
+    let lower = normalized.floor() as usize;
+    let high = (lower + 1).min(n - 1);
 
-    // Window size for interpolation
-    let window = data.window_size as usize;
-    let half_window = window / 2;
+    // window_size = degree + 1
+    let wndsiz = data.window_size as usize;
+    let degree = wndsiz - 1;
 
-    // Center the window around the query point
-    let start_idx = if raw_idx < half_window {
-        0
-    } else if raw_idx + half_window >= n {
-        n.saturating_sub(window)
+    // CSPICE algorithm: different strategies for odd vs even window sizes
+    let first = if wndsiz % 2 == 1 {
+        // ODD window size: center around NEAREST epoch
+        let lower_epoch = data.start_epoch + lower as f64 * data.step_size;
+        let high_epoch = data.start_epoch + high as f64 * data.step_size;
+        let near = if lower == 0 {
+            lower
+        } else if high >= n {
+            lower
+        } else if (epoch - lower_epoch).abs() <= (high_epoch - epoch).abs() {
+            lower
+        } else {
+            high
+        };
+        // first = max(near - degree/2, 0), clamped to valid range
+        let half = degree / 2;
+        if near < half {
+            0
+        } else if near > n - 1 - (degree - half) {
+            n - wndsiz
+        } else {
+            near - half
+        }
     } else {
-        raw_idx - half_window
+        // EVEN window size: use LOWER bracket
+        let half = degree / 2;
+        if lower < half {
+            0
+        } else if lower > n - 1 - (degree - half) {
+            n - wndsiz
+        } else {
+            lower - half
+        }
     };
 
-    let end_idx = (start_idx + window).min(n);
-
-    Ok((start_idx, end_idx))
+    let last = first + degree;
+    Ok((first, last + 1)) // Return as half-open interval [first, last+1)
 }
 
 /// Select the interpolation window for Type 9 (unequally spaced).
 ///
 /// Returns the indices of states to use for interpolation.
+///
+/// This implements the CSPICE algorithm from spkr09.c:
+/// - For ODD window size: center around the NEAREST epoch to the query
+/// - For EVEN window size: use the LOWER bracketing epoch
 fn select_window_type9(data: &Spk9Data, epoch: f64) -> Result<(usize, usize)> {
     let n = data.states.len();
     if n == 0 {
@@ -137,7 +172,7 @@ fn select_window_type9(data: &Spk9Data, epoch: f64) -> Result<(usize, usize)> {
         });
     }
 
-    // Binary search to find the nearest state
+    // Binary search to find the bracketing indices
     let mut lower = 0;
     let mut upper = n - 1;
 
@@ -149,23 +184,49 @@ fn select_window_type9(data: &Spk9Data, epoch: f64) -> Result<(usize, usize)> {
             upper = mid;
         }
     }
+    let high = lower + 1;
 
-    // Window size for interpolation
-    let window = data.window_size as usize;
-    let half_window = window / 2;
+    // window_size = degree + 1
+    let wndsiz = data.window_size as usize;
+    let degree = wndsiz - 1;
 
-    // Center the window around the query point
-    let start_idx = if lower < half_window {
-        0
-    } else if lower + half_window >= n {
-        n.saturating_sub(window)
+    // CSPICE algorithm: different strategies for odd vs even window sizes
+    let first = if wndsiz % 2 == 1 {
+        // ODD window size: center around NEAREST epoch
+        let near = if lower == 0 {
+            lower
+        } else if high >= n {
+            lower
+        } else if (epoch - data.states[lower].epoch).abs()
+            <= (data.states[high].epoch - epoch).abs()
+        {
+            lower
+        } else {
+            high
+        };
+        // first = max(near - degree/2, 0), clamped to valid range
+        let half = degree / 2;
+        if near < half {
+            0
+        } else if near > n - 1 - (degree - half) {
+            n - wndsiz
+        } else {
+            near - half
+        }
     } else {
-        lower - half_window
+        // EVEN window size: use LOWER bracket
+        let half = degree / 2;
+        if lower < half {
+            0
+        } else if lower > n - 1 - (degree - half) {
+            n - wndsiz
+        } else {
+            lower - half
+        }
     };
 
-    let end_idx = (start_idx + window).min(n);
-
-    Ok((start_idx, end_idx))
+    let last = first + degree;
+    Ok((first, last + 1)) // Return as half-open interval [first, last+1)
 }
 
 /// Interpolate a single component across states.

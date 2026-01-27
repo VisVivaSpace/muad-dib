@@ -465,6 +465,24 @@ pub fn tpc_path() -> String {
     test_file_path("test_data/test.tpc")
 }
 
+/// Get path to gmat-hermite.bsp (Type 13)
+pub fn hermite_spk_path() -> String {
+    test_file_path("test_data/gmat-hermite.bsp")
+}
+
+// ============================================================================
+// Frame Helpers
+// ============================================================================
+
+/// Convert NAIF frame code to CSPICE frame name string.
+pub fn frame_name(frame_code: i32) -> &'static str {
+    match frame_code {
+        1 => "J2000",
+        17 => "ECLIPJ2000",
+        _ => "J2000", // fallback to J2000 for unknown frames
+    }
+}
+
 // ============================================================================
 // Assertion Helpers
 // ============================================================================

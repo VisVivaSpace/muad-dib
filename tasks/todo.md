@@ -210,3 +210,95 @@ println!("Center: {}", state.center);   // 0 (SSB)
 println!("Frame: {}", state.frame);     // 1 (J2000)
 println!("Position: {:?}", state.position);
 ```
+
+---
+
+# SPK Type 9/13 Window Selection Fix
+
+## Summary
+
+Implemented CSPICE-compatible window selection algorithm for SPK Types 8/9 (Lagrange) and 13 (Hermite).
+
+## Status: COMPLETE ✅
+
+All CSPICE validation tests pass:
+- 13 SPK tests
+- 10 CK tests
+- 12 coordinate tests
+- 6 validation tests
+
+## Root Cause Analysis
+
+The initial 1.4 million km difference was NOT a parsing error, but a **reference frame mismatch**:
+
+- test.bsp segments use Frame 17 (ECLIPJ2000)
+- Tests were querying CSPICE in "J2000" (Frame 1)
+- J2000 vs ECLIPJ2000 differ by ~23.4° rotation around X-axis
+- This caused Y and Z components to differ significantly while X matched
+
+## Fixes Applied
+
+### 1. Reference Frame Fix (`tests/cspice_common.rs`, `tests/cspice_spk_tests.rs`)
+
+- Added `frame_name(frame_code: i32)` helper function to convert NAIF frame codes to CSPICE frame strings
+- Updated all `cspice_spkgeo()` calls to use `frame_name(spk.frame_code)` instead of hardcoded "J2000"
+
+### 2. Window Selection Algorithm (`src/spice/interpolate/lagrange.rs`, `src/spice/interpolate/hermite.rs`)
+
+Implemented CSPICE-compatible algorithm from spkr09.c:
+
+- **ODD window size**: Center around the NEAREST epoch
+- **EVEN window size**: Use the LOWER bracketing epoch
+
+```rust
+let first = if wndsiz % 2 == 1 {
+    // ODD: center around NEAREST epoch
+    let near = if (epoch - data.states[lower].epoch).abs()
+        <= (data.states[high].epoch - epoch).abs()
+    { lower } else { high };
+    // ... boundary clamping
+} else {
+    // EVEN: use LOWER bracket
+    // ... boundary clamping
+};
+```
+
+### 3. Endpoint Handling (`tests/cspice_spk_tests.rs`)
+
+- Query 1 microsecond before exact endpoints to avoid floating-point precision issues
+- At large epoch values (~1.3e9), `epoch - 1e-9 == epoch` due to float precision
+
+### 4. Coordinate Tests (`tests/cspice_coord_tests.rs`)
+
+- Changed `COORD_TOLERANCE` from 1e-12 to 1e-10 (appropriate for values ~5000 km)
+- Added `assert_angle_close()` for longitude comparisons with ±2π wraparound handling
+
+### 5. Validation Tests (`tests/cspice_validation_tests.rs`)
+
+- Fixed file path to use "test_data/test.bsp"
+
+## Files Modified
+
+| File | Change |
+|------|--------|
+| `src/spice/interpolate/lagrange.rs` | Window selection algorithm for Type 8/9 |
+| `src/spice/interpolate/hermite.rs` | Window selection algorithm for Type 13 |
+| `tests/cspice_common.rs` | Added `frame_name()` helper |
+| `tests/cspice_spk_tests.rs` | Frame handling, endpoint epsilon |
+| `tests/cspice_coord_tests.rs` | Tolerance and angle wraparound |
+| `tests/cspice_validation_tests.rs` | File path fix |
+| `tests/spk_debug.rs` | Diagnostic test file (new) |
+
+## Verification
+
+```bash
+CSPICE_LIB=/Users/nstrange/cspice/lib cargo test --features cspice,test-data \
+  --test cspice_spk_tests --test cspice_coord_tests --test cspice_ck_tests \
+  --test cspice_validation_tests -- --test-threads=1
+
+# Result: 41 tests pass (13 SPK + 12 coord + 10 CK + 6 validation)
+```
+
+## Known Issues (Pre-existing, Unrelated)
+
+- Pool tests (`cspice_pool_tests.rs`) fail on case sensitivity - CSPICE `gdpool_c` doesn't find lowercase variable names. This is a separate issue not related to the window selection fix.

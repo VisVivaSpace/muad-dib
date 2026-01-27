@@ -156,6 +156,10 @@ fn hermite_interpolate_derivative(
 }
 
 /// Select interpolation window for Type 13 data.
+///
+/// This implements the CSPICE algorithm from spkr13.c (same as spkr09.c):
+/// - For ODD window size: center around the NEAREST epoch to the query
+/// - For EVEN window size: use the LOWER bracketing epoch
 fn select_window(data: &Spk13Data, epoch: f64) -> Result<(usize, usize)> {
     let n = data.states.len();
     if n == 0 {
@@ -189,22 +193,49 @@ fn select_window(data: &Spk13Data, epoch: f64) -> Result<(usize, usize)> {
             upper = mid;
         }
     }
+    let high = lower + 1;
 
-    // Select window centered around the query
-    let window = data.window_size as usize;
-    let half_window = window / 2;
+    // window_size = degree + 1
+    let wndsiz = data.window_size as usize;
+    let degree = wndsiz - 1;
 
-    let start_idx = if lower < half_window {
-        0
-    } else if lower + half_window >= n {
-        n.saturating_sub(window)
+    // CSPICE algorithm: different strategies for odd vs even window sizes
+    let first = if wndsiz % 2 == 1 {
+        // ODD window size: center around NEAREST epoch
+        let near = if lower == 0 {
+            lower
+        } else if high >= n {
+            lower
+        } else if (epoch - data.states[lower].epoch).abs()
+            <= (data.states[high].epoch - epoch).abs()
+        {
+            lower
+        } else {
+            high
+        };
+        // first = max(near - degree/2, 0), clamped to valid range
+        let half = degree / 2;
+        if near < half {
+            0
+        } else if near > n - 1 - (degree - half) {
+            n - wndsiz
+        } else {
+            near - half
+        }
     } else {
-        lower - half_window
+        // EVEN window size: use LOWER bracket
+        let half = degree / 2;
+        if lower < half {
+            0
+        } else if lower > n - 1 - (degree - half) {
+            n - wndsiz
+        } else {
+            lower - half
+        }
     };
 
-    let end_idx = (start_idx + window).min(n);
-
-    Ok((start_idx, end_idx))
+    let last = first + degree;
+    Ok((first, last + 1)) // Return as half-open interval [first, last+1)
 }
 
 /// Evaluate an SPK Type 13 segment at the given epoch.
