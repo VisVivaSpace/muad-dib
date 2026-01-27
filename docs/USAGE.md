@@ -73,7 +73,7 @@ let bodies = kernel.spk_bodies();
 let segments = kernel.spk_segments();
 ```
 
-> **Note:** Interpolation and computation have moved to the `understated` crate.
+> **Note:** Interpolation and computation have moved to the [`understated`](https://github.com/VisVivaSpace/understated) crate.
 
 ### Example Programs
 
@@ -95,7 +95,7 @@ The `examples/` directory contains complete working programs:
 ### Traits
 
 - `KernelPoolExt` - Adds `get_f64()`, `pool_has()`, etc. for kernel pool access
-- `LeapSecondExt` - Adds `lsk_data()` for leap second data extraction
+- `LeapSecondExt` - Adds `lsk_data()` (returns `Result<LeapSecondData>`) for leap second data extraction
 
 ## Format Comparison
 
@@ -200,6 +200,8 @@ Both Parquet and Arrow use a flattened row-per-segment schema:
 | `data` | list<float64> | Raw segment data array |
 
 Additional columns exist for CK and BPCK segments (e.g., `initial_sclk`, `instrument_code`).
+
+> **Note:** In the Rust API, `target_code`, `center_code`, `frame_code`, and `instrument_code` are `NaifId` newtypes. They serialize transparently as `int32` in Parquet/Arrow output.
 
 ### Hierarchical Schema (HDF5)
 

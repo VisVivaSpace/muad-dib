@@ -32,7 +32,7 @@ muad-dib extracts the valuable spice data within and converts it to formats that
 - Preserves all segment metadata for exact reconstruction
 - Kernel pool access, time parsing, and leap second conversions
 - Text kernel support: LSK (leap seconds), SCLK, FK (frames)
-- Interpolation/computation available in the [`understated`](https://github.com/nstrange/understated) crate
+- Interpolation/computation available in the [`understated`](https://github.com/VisVivaSpace/understated) crate
 
 ## Supported Formats
 
@@ -120,7 +120,7 @@ for segment in kernel.spk_segments() {
 }
 ```
 
-> **Note:** Interpolation and state computation have moved to the [`understated`](https://github.com/nstrange/understated) crate.
+> **Note:** Interpolation and state computation have moved to the [`understated`](https://github.com/VisVivaSpace/understated) crate.
 
 See `examples/` for complete working programs demonstrating each API.
 
