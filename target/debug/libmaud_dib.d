@@ -1,0 +1,1 @@
+/Users/nstrange/git/vis_viva/clawd/despice/target/debug/libmaud_dib.rlib: /Users/nstrange/git/vis_viva/clawd/despice/src/error.rs /Users/nstrange/git/vis_viva/clawd/despice/src/lib.rs /Users/nstrange/git/vis_viva/clawd/despice/src/prelude.rs

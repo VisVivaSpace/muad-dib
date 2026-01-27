@@ -1,0 +1,46 @@
+[package]
+name = "muad-dib"
+version = "0.2.0"
+edition = "2021"
+license = "MIT"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "despice"
+path = "src/main.rs"
+
+[[bin]]
+name = "respice"
+path = "src/bin/respice.rs"
+
+[[bin]]
+name = "brief"
+path = "src/bin/brief.rs"
+
+[[bin]]
+name = "inspector"
+path = "src/bin/inspector.rs"
+
+[dependencies]
+ratatui = "0.29"
+crossterm = "0.28"
+clap = "4.4.12"
+thiserror = "1.0.56"
+hdf5 = { package = "hdf5-metno", version = "0.12" }
+ndarray = "0.15"
+serde = { version = "1.0", features = ["derive"] }
+rmp-serde = "1.0"
+bson = "2.0"
+parquet = { version = "54", default-features = false, features = ["arrow"] }
+arrow = { version = "54", default-features = false, features = ["ipc"] }
+serde_arrow = { version = "0.12", features = ["arrow-54"] }
+
+[features]
+default = []
+cspice = []
+
+[dev-dependencies]
+tempfile = "3"
+anise = "0.5"
+libc = "0.2"

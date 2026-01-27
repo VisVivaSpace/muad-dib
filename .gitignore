@@ -1,0 +1,5 @@
+target/
+test_data/
+.claude/
+CLAUDE.md
+.DS_Store

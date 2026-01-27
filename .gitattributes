@@ -1,0 +1,8 @@
+test_data/*.bsp filter=lfs diff=lfs merge=lfs -text
+test_data/*.bc filter=lfs diff=lfs merge=lfs -text
+test_data/*.bpc filter=lfs diff=lfs merge=lfs -text
+test_data/*.hdf5 filter=lfs diff=lfs merge=lfs -text
+*.bsp filter=lfs diff=lfs merge=lfs -text
+*.bc filter=lfs diff=lfs merge=lfs -text
+*.bpc filter=lfs diff=lfs merge=lfs -text
+*.hdf5 filter=lfs diff=lfs merge=lfs -text
