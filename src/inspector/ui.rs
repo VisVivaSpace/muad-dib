@@ -1,8 +1,8 @@
 //! UI rendering for the Inspector TUI.
 
 use super::{ActivePane, App, DetailSection, TreeDataKey};
-use crate::brief::{FileType, TimeFormat, TimeKind};
 use crate::brief::time::format_time;
+use crate::brief::{FileType, TimeFormat, TimeKind};
 use crate::DAFSegment;
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Tabs, Wrap};
@@ -46,7 +46,10 @@ fn render_title_bar(frame: &mut Frame, area: Rect) {
         Span::raw("  "),
         Span::styled("[?] Help  [q] Quit", Style::default().dim()),
     ]);
-    frame.render_widget(Paragraph::new(title).style(Style::default().bg(Color::DarkGray)), area);
+    frame.render_widget(
+        Paragraph::new(title).style(Style::default().bg(Color::DarkGray)),
+        area,
+    );
 }
 
 fn render_file_tabs(frame: &mut Frame, area: Rect, app: &App) {
@@ -91,7 +94,7 @@ fn render_content(frame: &mut Frame, area: Rect, app: &App) {
                - Parquet files (.parquet, .pq)\n\
                - Arrow files (.arrow, .feather)\n\
                - MsgPack files (.msgpack, .mp)\n\
-               - BSON files (.bson)"
+               - BSON files (.bson)",
         )
         .block(Block::default().borders(Borders::ALL).title("Inspector"));
         frame.render_widget(welcome, area);
@@ -256,8 +259,16 @@ fn render_overview(frame: &mut Frame, area: Rect, app: &App, data_key: Option<&T
 
                 // Show coverage
                 if !obj.intervals.is_empty() {
-                    let start = obj.intervals.iter().map(|i| i.start).fold(f64::INFINITY, f64::min);
-                    let end = obj.intervals.iter().map(|i| i.end).fold(f64::NEG_INFINITY, f64::max);
+                    let start = obj
+                        .intervals
+                        .iter()
+                        .map(|i| i.start)
+                        .fold(f64::INFINITY, f64::min);
+                    let end = obj
+                        .intervals
+                        .iter()
+                        .map(|i| i.end)
+                        .fold(f64::NEG_INFINITY, f64::max);
 
                     let (start_str, end_str) = if obj.time_kind == TimeKind::SCLK {
                         (format!("{:.3} SCLK", start), format!("{:.3} SCLK", end))
@@ -323,25 +334,36 @@ fn render_segments(frame: &mut Frame, area: Rect, app: &App, data_key: Option<&T
                 " #  | Target     | Center | Frame | Type | Start             | End",
                 Style::default().bold(),
             ));
-            lines.push(Line::raw("────┼────────────┼────────┼───────┼──────┼───────────────────┼───────────────────"));
+            lines.push(Line::raw(
+                "────┼────────────┼────────┼───────┼──────┼───────────────────┼───────────────────",
+            ));
         }
         FileType::CK => {
             lines.push(Line::styled(
                 " #  | Instrument | Frame  | Type | AV | Start SCLK        | End SCLK",
                 Style::default().bold(),
             ));
-            lines.push(Line::raw("────┼────────────┼────────┼──────┼────┼───────────────────┼───────────────────"));
+            lines.push(Line::raw(
+                "────┼────────────┼────────┼──────┼────┼───────────────────┼───────────────────",
+            ));
         }
         FileType::BPCK => {
             lines.push(Line::styled(
                 " #  | Frame ID   | Base   | Type | Start             | End",
                 Style::default().bold(),
             ));
-            lines.push(Line::raw("────┼────────────┼────────┼──────┼───────────────────┼───────────────────"));
+            lines.push(Line::raw(
+                "────┼────────────┼────────┼──────┼───────────────────┼───────────────────",
+            ));
         }
     }
 
-    for (i, seg) in segments.iter().skip(app.detail_scroll).take(area.height as usize - 2).enumerate() {
+    for (i, seg) in segments
+        .iter()
+        .skip(app.detail_scroll)
+        .take(area.height as usize - 2)
+        .enumerate()
+    {
         let row_num = i + app.detail_scroll + 1;
         let line = match seg {
             DAFSegment::SPK(s) => format!(

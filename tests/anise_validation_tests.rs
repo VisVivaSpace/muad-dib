@@ -18,7 +18,9 @@ const TEST_FILE: &str = "test_data/test.bsp";
 /// not just the valid ones. We need to use daf_summary().num_summaries() to
 /// get the actual count.
 fn get_anise_segment_count(daf: &DAF<SPKSummaryRecord>) -> usize {
-    daf.daf_summary().expect("Failed to get DAF summary").num_summaries()
+    daf.daf_summary()
+        .expect("Failed to get DAF summary")
+        .num_summaries()
 }
 
 /// Validate file record fields match between despice and anise.
@@ -34,7 +36,9 @@ fn validate_file_record_matches_anise() {
     // Load with anise
     let anise_daf: DAF<SPKSummaryRecord> =
         DAF::load(TEST_FILE).expect("Anise failed to load DAF file");
-    let anise_fr = anise_daf.file_record().expect("Failed to get anise file record");
+    let anise_fr = anise_daf
+        .file_record()
+        .expect("Failed to get anise file record");
 
     // Compare ND (number of double precision components)
     assert_eq!(
@@ -64,7 +68,9 @@ fn validate_file_record_matches_anise() {
     );
 
     // Compare endianness
-    let anise_endian = anise_fr.endianness().expect("Failed to get anise endianness");
+    let anise_endian = anise_fr
+        .endianness()
+        .expect("Failed to get anise endianness");
     let despice_endian_matches = match (despice_meta.endian, anise_endian) {
         (Endian::Little, anise::naif::Endian::Little) => true,
         (Endian::Big, anise::naif::Endian::Big) => true,
@@ -113,7 +119,9 @@ fn validate_segment_summaries_match_anise() {
     let anise_daf: DAF<SPKSummaryRecord> =
         DAF::load(TEST_FILE).expect("Anise failed to load DAF file");
     let num_summaries = get_anise_segment_count(&anise_daf);
-    let anise_summaries = &anise_daf.data_summaries().expect("Failed to get anise summaries")[..num_summaries];
+    let anise_summaries = &anise_daf
+        .data_summaries()
+        .expect("Failed to get anise summaries")[..num_summaries];
 
     assert_eq!(
         despice_segments.len(),
@@ -121,8 +129,10 @@ fn validate_segment_summaries_match_anise() {
         "Segment count mismatch before comparison"
     );
 
-    for (i, (despice_seg, anise_sum)) in
-        despice_segments.iter().zip(anise_summaries.iter()).enumerate()
+    for (i, (despice_seg, anise_sum)) in despice_segments
+        .iter()
+        .zip(anise_summaries.iter())
+        .enumerate()
     {
         let spk = match despice_seg {
             DAFSegment::SPK(s) => s,
@@ -206,10 +216,14 @@ fn validate_segment_data_sizes() {
     let anise_daf: DAF<SPKSummaryRecord> =
         DAF::load(TEST_FILE).expect("Anise failed to load DAF file");
     let num_summaries = get_anise_segment_count(&anise_daf);
-    let anise_summaries = &anise_daf.data_summaries().expect("Failed to get anise summaries")[..num_summaries];
+    let anise_summaries = &anise_daf
+        .data_summaries()
+        .expect("Failed to get anise summaries")[..num_summaries];
 
-    for (i, (despice_seg, anise_sum)) in
-        despice_segments.iter().zip(anise_summaries.iter()).enumerate()
+    for (i, (despice_seg, anise_sum)) in despice_segments
+        .iter()
+        .zip(anise_summaries.iter())
+        .enumerate()
     {
         let spk = match despice_seg {
             DAFSegment::SPK(s) => s,

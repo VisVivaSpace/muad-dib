@@ -147,7 +147,7 @@ impl CoverageIndex {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{SPKSegment, CKSegment};
+    use crate::{CKSegment, SPKSegment};
 
     #[test]
     fn test_coverage_index_empty() {

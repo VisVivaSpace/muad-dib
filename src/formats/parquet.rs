@@ -215,32 +215,46 @@ impl OutputFormat for ParquetFormat {
             .collect();
 
         if rows.is_empty() {
-            return Err(Error::EmptyData { context: "No segments to write".into() });
+            return Err(Error::EmptyData {
+                context: "No segments to write".into(),
+            });
         }
 
         // Derive Arrow schema from the data
         let tracing_options = TracingOptions::default().allow_null_fields(true);
-        let fields = Vec::<FieldRef>::from_samples(&rows, tracing_options)
-            .map_err(|e| Error::Serialization { format: "Arrow".into(), message: e.to_string() })?;
+        let fields = Vec::<FieldRef>::from_samples(&rows, tracing_options).map_err(|e| {
+            Error::Serialization {
+                format: "Arrow".into(),
+                message: e.to_string(),
+            }
+        })?;
 
         // Convert to Arrow RecordBatch via serde_arrow
-        let batch: RecordBatch = serde_arrow::to_record_batch(&fields, &rows)
-            .map_err(|e| Error::Serialization { format: "Arrow".into(), message: e.to_string() })?;
+        let batch: RecordBatch =
+            serde_arrow::to_record_batch(&fields, &rows).map_err(|e| Error::Serialization {
+                format: "Arrow".into(),
+                message: e.to_string(),
+            })?;
 
-        let file =
-            File::create(path)?;
+        let file = File::create(path)?;
 
         let props = WriterProperties::builder().build();
-        let mut writer = ArrowWriter::try_new(file, batch.schema(), Some(props))
-            .map_err(|e| Error::Serialization { format: "Parquet".into(), message: e.to_string() })?;
+        let mut writer = ArrowWriter::try_new(file, batch.schema(), Some(props)).map_err(|e| {
+            Error::Serialization {
+                format: "Parquet".into(),
+                message: e.to_string(),
+            }
+        })?;
 
-        writer
-            .write(&batch)
-            .map_err(|e| Error::Serialization { format: "Parquet".into(), message: e.to_string() })?;
+        writer.write(&batch).map_err(|e| Error::Serialization {
+            format: "Parquet".into(),
+            message: e.to_string(),
+        })?;
 
-        writer
-            .close()
-            .map_err(|e| Error::Serialization { format: "Parquet".into(), message: e.to_string() })?;
+        writer.close().map_err(|e| Error::Serialization {
+            format: "Parquet".into(),
+            message: e.to_string(),
+        })?;
 
         Ok(())
     }
@@ -249,18 +263,26 @@ impl OutputFormat for ParquetFormat {
 /// Read sources from a Parquet file.
 /// Reconstructs DAFSource structures from the flattened segment rows.
 pub fn read_parquet(path: &Path) -> Result<Vec<DAFSource>> {
-
-    let file =
-        File::open(path)?;
+    let file = File::open(path)?;
 
     let reader = parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder::try_new(file)
-        .map_err(|e| Error::Serialization { format: "Parquet".into(), message: e.to_string() })?
+        .map_err(|e| Error::Serialization {
+            format: "Parquet".into(),
+            message: e.to_string(),
+        })?
         .build()
-        .map_err(|e| Error::Serialization { format: "Parquet".into(), message: e.to_string() })?;
+        .map_err(|e| Error::Serialization {
+            format: "Parquet".into(),
+            message: e.to_string(),
+        })?;
 
-    let batches: Vec<RecordBatch> = reader
-        .collect::<std::result::Result<Vec<_>, _>>()
-        .map_err(|e| Error::Serialization { format: "Parquet".into(), message: e.to_string() })?;
+    let batches: Vec<RecordBatch> =
+        reader
+            .collect::<std::result::Result<Vec<_>, _>>()
+            .map_err(|e| Error::Serialization {
+                format: "Parquet".into(),
+                message: e.to_string(),
+            })?;
 
     if batches.is_empty() {
         return Ok(Vec::new());
@@ -269,8 +291,11 @@ pub fn read_parquet(path: &Path) -> Result<Vec<DAFSource>> {
     // Combine all batches and decode
     let mut all_rows: Vec<SegmentRow> = Vec::new();
     for batch in &batches {
-        let rows: Vec<SegmentRow> = serde_arrow::from_record_batch(batch)
-            .map_err(|e| Error::Serialization { format: "Arrow".into(), message: e.to_string() })?;
+        let rows: Vec<SegmentRow> =
+            serde_arrow::from_record_batch(batch).map_err(|e| Error::Serialization {
+                format: "Arrow".into(),
+                message: e.to_string(),
+            })?;
         all_rows.extend(rows);
     }
 

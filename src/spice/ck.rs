@@ -83,8 +83,11 @@ pub fn slerp(q0: &[f64; 4], q1: &[f64; 4], t: f64) -> [f64; 4] {
         ];
 
         // Normalize
-        let norm =
-            (result[0] * result[0] + result[1] * result[1] + result[2] * result[2] + result[3] * result[3]).sqrt();
+        let norm = (result[0] * result[0]
+            + result[1] * result[1]
+            + result[2] * result[2]
+            + result[3] * result[3])
+            .sqrt();
         return [
             result[0] / norm,
             result[1] / norm,
@@ -111,8 +114,11 @@ pub fn slerp(q0: &[f64; 4], q1: &[f64; 4], t: f64) -> [f64; 4] {
     ];
 
     // Normalize result for numerical stability
-    let norm = (result[0] * result[0] + result[1] * result[1]
-        + result[2] * result[2] + result[3] * result[3]).sqrt();
+    let norm = (result[0] * result[0]
+        + result[1] * result[1]
+        + result[2] * result[2]
+        + result[3] * result[3])
+        .sqrt();
 
     [
         result[0] / norm,
@@ -168,7 +174,10 @@ fn evaluate_type1(data: &Ck1Data, sclk: f64) -> Result<Pointing> {
     })?;
 
     let record = &data.records[idx];
-    Ok(Pointing::new_raw(record.quaternion(), record.angular_velocity()))
+    Ok(Pointing::new_raw(
+        record.quaternion(),
+        record.angular_velocity(),
+    ))
 }
 
 /// Evaluate CK Type 3 data at the given SCLK.
@@ -207,7 +216,10 @@ fn evaluate_type3(data: &Ck3Data, sclk: f64) -> Result<Pointing> {
     // Exact match
     if (data.records[lower_idx].sclk - sclk).abs() < 1e-10 {
         let record = &data.records[lower_idx];
-        return Ok(Pointing::new_raw(record.quaternion(), record.angular_velocity()));
+        return Ok(Pointing::new_raw(
+            record.quaternion(),
+            record.angular_velocity(),
+        ));
     }
 
     // Need to interpolate
@@ -215,7 +227,10 @@ fn evaluate_type3(data: &Ck3Data, sclk: f64) -> Result<Pointing> {
     if upper_idx == lower_idx {
         // At the last record
         let record = &data.records[lower_idx];
-        return Ok(Pointing::new_raw(record.quaternion(), record.angular_velocity()));
+        return Ok(Pointing::new_raw(
+            record.quaternion(),
+            record.angular_velocity(),
+        ));
     }
 
     let rec0 = &data.records[lower_idx];
@@ -321,7 +336,7 @@ mod tests {
     #[test]
     fn test_slerp_endpoints() {
         let q0 = [1.0, 0.0, 0.0, 0.0]; // Identity (already normalized)
-        // Use properly normalized quaternion for 90 degree rotation around X
+                                       // Use properly normalized quaternion for 90 degree rotation around X
         let half_angle = std::f64::consts::FRAC_PI_4; // 45 degrees in radians
         let q1 = [half_angle.cos(), half_angle.sin(), 0.0, 0.0];
 
@@ -367,7 +382,7 @@ mod tests {
                 + result[1] * result[1]
                 + result[2] * result[2]
                 + result[3] * result[3])
-            .sqrt();
+                .sqrt();
 
             assert!(
                 (norm - 1.0).abs() < 1e-10,
@@ -392,7 +407,7 @@ mod tests {
             + result[1] * result[1]
             + result[2] * result[2]
             + result[3] * result[3])
-        .sqrt();
+            .sqrt();
         assert!((norm - 1.0).abs() < 1e-10);
     }
 

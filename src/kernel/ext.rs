@@ -4,7 +4,7 @@
 
 use crate::hdf5_output::DAFSource;
 use crate::types::NaifId;
-use crate::{DAFSegment, SPKSegment, CKSegment, BPCKSegment};
+use crate::{BPCKSegment, CKSegment, DAFSegment, SPKSegment};
 
 /// Extension trait for iterators over DAFSegments.
 pub trait DAFSegmentIteratorExt<'a>: Iterator<Item = &'a DAFSegment> + Sized {
@@ -228,7 +228,12 @@ mod tests {
     fn test_spk_iterator_ext() {
         let source = make_test_source();
 
-        let segs: Vec<_> = source.segments.iter().spk_only().for_target(NaifId(399)).collect();
+        let segs: Vec<_> = source
+            .segments
+            .iter()
+            .spk_only()
+            .for_target(NaifId(399))
+            .collect();
         assert_eq!(segs.len(), 1);
         assert_eq!(segs[0].name, "Earth");
     }

@@ -80,7 +80,9 @@ pub mod text_pck;
 pub mod types;
 
 // Re-export NAIF ID utilities for convenient access
-pub use brief::names::{body_name, format_frame_id, format_id, format_instrument_id, frame_name, spacecraft_name};
+pub use brief::names::{
+    body_name, format_frame_id, format_id, format_instrument_id, frame_name, spacecraft_name,
+};
 
 // Re-export time formatting utilities
 pub use brief::time::{format_sclk_ticks, format_time, format_time_for_display};

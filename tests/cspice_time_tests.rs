@@ -10,8 +10,7 @@
 mod cspice_common;
 
 use cspice_common::{
-    assert_close, cspice_et2utc, cspice_str2et, cspice_utc2et, lsk_path, CspiceKernels,
-    CSPICE_LOCK,
+    assert_close, cspice_et2utc, cspice_str2et, cspice_utc2et, lsk_path, CspiceKernels, CSPICE_LOCK,
 };
 use muad_dib::kernel::SpiceKernel;
 use muad_dib::spice::{tdb_to_utc, utc_to_tdb, LeapSecondExt, TimeFormat};
@@ -241,8 +240,8 @@ fn validate_tdb_to_utc_j2000() {
     let cspice_utc = cspice_et2utc(tdb, "ISOC", 3);
 
     // muad-dib tdb_to_utc
-    let muad_utc =
-        tdb_to_utc(&kernel, EpochTDB(tdb), TimeFormat::Iso8601).expect("Failed to convert TDB to UTC");
+    let muad_utc = tdb_to_utc(&kernel, EpochTDB(tdb), TimeFormat::Iso8601)
+        .expect("Failed to convert TDB to UTC");
 
     // Both should produce UTC times around 2000-01-01T11:58:55
     // (J2000 TDB is about 64 seconds ahead of UTC due to leap seconds)
@@ -274,8 +273,7 @@ fn validate_utc_tdb_round_trip() {
     let tdb = utc_to_tdb(&kernel, utc_str).expect("UTC to TDB failed");
 
     // Convert back to UTC
-    let utc_back =
-        tdb_to_utc(&kernel, tdb, TimeFormat::Iso8601).expect("TDB to UTC failed");
+    let utc_back = tdb_to_utc(&kernel, tdb, TimeFormat::Iso8601).expect("TDB to UTC failed");
 
     // Parse the returned UTC string and convert again
     let tdb_again = utc_to_tdb(&kernel, &utc_back).expect("Second UTC to TDB failed");
@@ -314,7 +312,12 @@ fn validate_leap_second_boundary() {
     let cspice_diff = cspice_after - cspice_before;
     let muad_diff = muad_after.0 - muad_before.0;
 
-    assert_close(muad_diff, cspice_diff, TDB_UTC_TOLERANCE, "Leap second difference");
+    assert_close(
+        muad_diff,
+        cspice_diff,
+        TDB_UTC_TOLERANCE,
+        "Leap second difference",
+    );
 }
 
 #[test]
@@ -337,8 +340,8 @@ fn validate_multiple_epochs() {
 
     for utc_str in test_utc_times.iter() {
         let cspice_et = cspice_utc2et(utc_str);
-        let muad_tdb = utc_to_tdb(&kernel, utc_str)
-            .expect(&format!("Failed to convert: {}", utc_str));
+        let muad_tdb =
+            utc_to_tdb(&kernel, utc_str).expect(&format!("Failed to convert: {}", utc_str));
 
         assert_close(
             muad_tdb.0,

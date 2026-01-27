@@ -80,7 +80,8 @@ fn parse_type2(data: &[f64]) -> Option<SpkData> {
 
         let coeff_start = start + 2;
         let x_coeffs = data[coeff_start..coeff_start + coeffs_per_axis].to_vec();
-        let y_coeffs = data[coeff_start + coeffs_per_axis..coeff_start + 2 * coeffs_per_axis].to_vec();
+        let y_coeffs =
+            data[coeff_start + coeffs_per_axis..coeff_start + 2 * coeffs_per_axis].to_vec();
         let z_coeffs =
             data[coeff_start + 2 * coeffs_per_axis..coeff_start + 3 * coeffs_per_axis].to_vec();
 
@@ -150,7 +151,8 @@ fn parse_type3(data: &[f64]) -> Option<SpkData> {
 
         let coeff_start = start + 2;
         let x_coeffs = data[coeff_start..coeff_start + coeffs_per_axis].to_vec();
-        let y_coeffs = data[coeff_start + coeffs_per_axis..coeff_start + 2 * coeffs_per_axis].to_vec();
+        let y_coeffs =
+            data[coeff_start + coeffs_per_axis..coeff_start + 2 * coeffs_per_axis].to_vec();
         let z_coeffs =
             data[coeff_start + 2 * coeffs_per_axis..coeff_start + 3 * coeffs_per_axis].to_vec();
         let vx_coeffs =
@@ -327,7 +329,11 @@ fn parse_type9(data: &[f64]) -> Option<SpkData> {
 
     let state_size = 6;
     // Epoch directory size: floor((N-1)/100) elements when N > 100
-    let epoch_dir_size = if num_states > 100 { (num_states - 1) / 100 } else { 0 };
+    let epoch_dir_size = if num_states > 100 {
+        (num_states - 1) / 100
+    } else {
+        0
+    };
     let expected_data = num_states * state_size + num_states + epoch_dir_size + 2;
     if data.len() < expected_data {
         return None;
@@ -385,7 +391,11 @@ fn parse_type13(data: &[f64]) -> Option<SpkData> {
 
     let state_size = 6;
     // Epoch directory size: floor((N-1)/100) elements when N > 100
-    let epoch_dir_size = if num_states > 100 { (num_states - 1) / 100 } else { 0 };
+    let epoch_dir_size = if num_states > 100 {
+        (num_states - 1) / 100
+    } else {
+        0
+    };
     let expected_data = num_states * state_size + num_states + epoch_dir_size + 2;
     if data.len() < expected_data {
         return None;
@@ -430,8 +440,8 @@ mod tests {
         // Record size = 2 (MID, RADIUS) + 3 * 2 = 8
         let data = vec![
             // Record 1
-            100.0,    // MID
-            50.0,     // RADIUS
+            100.0, // MID
+            50.0,  // RADIUS
             1.0, 2.0, // X coefficients
             3.0, 4.0, // Y coefficients
             5.0, 6.0, // Z coefficients
@@ -507,7 +517,7 @@ mod tests {
             // State 1
             1.0, 2.0, 3.0, 0.1, 0.2, 0.3, // x, y, z, vx, vy, vz
             // State 2
-            4.0, 5.0, 6.0, 0.4, 0.5, 0.6, // Directory
+            4.0, 5.0, 6.0, 0.4, 0.5, 0.6,   // Directory
             0.0,   // START_EPOCH
             100.0, // STEP_SIZE
             2.0,   // WINDOW_SIZE
@@ -536,7 +546,7 @@ mod tests {
             // State 1
             1.0, 2.0, 3.0, 0.1, 0.2, 0.3, // x, y, z, vx, vy, vz
             // State 2
-            4.0, 5.0, 6.0, 0.4, 0.5, 0.6, // Epochs
+            4.0, 5.0, 6.0, 0.4, 0.5, 0.6,   // Epochs
             0.0,   // Epoch 1
             150.0, // Epoch 2
             // Directory

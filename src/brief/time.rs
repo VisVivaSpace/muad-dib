@@ -13,8 +13,7 @@ const SECONDS_PER_DAY: f64 = 86400.0;
 
 /// Month names
 const MONTHS: [&str; 12] = [
-    "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
-    "JUL", "AUG", "SEP", "OCT", "NOV", "DEC",
+    "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC",
 ];
 
 /// Format a time value according to the specified format.
@@ -135,13 +134,19 @@ mod tests {
     #[test]
     fn test_format_time_dispatcher() {
         let t = 0.0;
-        assert_eq!(format_time(t, TimeFormat::CalendarET), "2000 JAN 01 12:00:00.000");
+        assert_eq!(
+            format_time(t, TimeFormat::CalendarET),
+            "2000 JAN 01 12:00:00.000"
+        );
         assert_eq!(format_time(t, TimeFormat::SecondsET), "0.000000");
     }
 
     #[test]
     fn test_format_sclk_ticks() {
-        assert_eq!(format_sclk_ticks(1287100360.885000), "1287100360.885000 SCLK");
+        assert_eq!(
+            format_sclk_ticks(1287100360.885000),
+            "1287100360.885000 SCLK"
+        );
         assert_eq!(format_sclk_ticks(0.0), "0.000000 SCLK");
     }
 

@@ -87,8 +87,8 @@ pub use coverage::CoverageIndex;
 pub use ext::{CkIteratorExt, DAFSegmentIteratorExt, DAFSourceExt, SpkIteratorExt};
 pub use spk::SpkSegmentView;
 pub use spk_types::{
-    ChebyshevRecord, ChebyshevRecordWithVelocity, Spk2Data, Spk3Data, Spk5Data, Spk8Data,
-    Spk9Data, Spk13Data, SpkData, StateRecord,
+    ChebyshevRecord, ChebyshevRecordWithVelocity, Spk13Data, Spk2Data, Spk3Data, Spk5Data,
+    Spk8Data, Spk9Data, SpkData, StateRecord,
 };
 
 use crate::brief::CoverageInterval;
@@ -96,7 +96,7 @@ use crate::hdf5_output::DAFSource;
 use crate::prelude::*;
 use crate::text_pck::{PCKSource, PCKVariable};
 use crate::types::NaifId;
-use crate::{DAFSegment, SPKSegment, CKSegment, BPCKSegment};
+use crate::{BPCKSegment, CKSegment, DAFSegment, SPKSegment};
 use std::path::Path;
 
 /// Unified entry point for loading and querying SPICE kernel data.

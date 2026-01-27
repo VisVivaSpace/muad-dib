@@ -78,7 +78,7 @@ fn test_wrong_endian_byte() {
         let mut data = vec![0u8; 1100];
         // Set something at offset 4 that looks like a type
         data[4] = b'S'; // SPK type
-        // Set invalid endian byte at offset 88 (not 'B' or 'L')
+                        // Set invalid endian byte at offset 88 (not 'B' or 'L')
         data[88] = b'X'; // Invalid
         file.write_all(&data).expect("Could not write");
     }

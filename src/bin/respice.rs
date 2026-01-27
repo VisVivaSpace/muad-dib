@@ -87,9 +87,18 @@ fn main() {
     }
 
     // Separate DAF sources by type
-    let spk_sources: Vec<_> = daf_sources.iter().filter(|s| s.header.kind == "SPK").collect();
-    let ck_sources: Vec<_> = daf_sources.iter().filter(|s| s.header.kind == "CK").collect();
-    let bpck_sources: Vec<_> = daf_sources.iter().filter(|s| s.header.kind == "BPCK").collect();
+    let spk_sources: Vec<_> = daf_sources
+        .iter()
+        .filter(|s| s.header.kind == "SPK")
+        .collect();
+    let ck_sources: Vec<_> = daf_sources
+        .iter()
+        .filter(|s| s.header.kind == "CK")
+        .collect();
+    let bpck_sources: Vec<_> = daf_sources
+        .iter()
+        .filter(|s| s.header.kind == "BPCK")
+        .collect();
 
     let mut written_count = 0;
 

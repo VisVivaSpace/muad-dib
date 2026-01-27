@@ -76,6 +76,9 @@ fn lagrange_interpolate(x_values: &[f64], y_values: &[f64], x: f64) -> f64 {
 /// This implements the CSPICE algorithm from spkr08.c:
 /// - For ODD window size: center around the NEAREST epoch to the query
 /// - For EVEN window size: use the LOWER bracketing epoch
+// Allow: The branches handle semantically different cases (edge vs normal) that happen
+// to return the same value. This matches CSPICE's window selection algorithm exactly.
+#[allow(clippy::if_same_then_else)]
 fn select_window_type8(data: &Spk8Data, epoch: f64) -> Result<(usize, usize)> {
     let n = data.states.len();
     if n == 0 {
@@ -151,6 +154,9 @@ fn select_window_type8(data: &Spk8Data, epoch: f64) -> Result<(usize, usize)> {
 /// This implements the CSPICE algorithm from spkr09.c:
 /// - For ODD window size: center around the NEAREST epoch to the query
 /// - For EVEN window size: use the LOWER bracketing epoch
+// Allow: The branches handle semantically different cases (edge vs normal) that happen
+// to return the same value. This matches CSPICE's window selection algorithm exactly.
+#[allow(clippy::if_same_then_else)]
 fn select_window_type9(data: &Spk9Data, epoch: f64) -> Result<(usize, usize)> {
     let n = data.states.len();
     if n == 0 {

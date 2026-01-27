@@ -37,7 +37,10 @@ impl DafAddress {
     /// Byte offset must be divisible by 8.
     #[inline]
     pub fn from_byte_offset(offset: u64) -> Self {
-        debug_assert!(offset.is_multiple_of(8), "Byte offset must be divisible by 8");
+        debug_assert!(
+            offset.is_multiple_of(8),
+            "Byte offset must be divisible by 8"
+        );
         DafAddress((offset / 8) + 1)
     }
 }

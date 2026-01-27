@@ -31,12 +31,7 @@ use crate::spice::interpolate::State;
 /// # Returns
 ///
 /// Interpolated value at the query epoch.
-fn hermite_interpolate(
-    epochs: &[f64],
-    values: &[f64],
-    derivatives: &[f64],
-    epoch: f64,
-) -> f64 {
+fn hermite_interpolate(epochs: &[f64], values: &[f64], derivatives: &[f64], epoch: f64) -> f64 {
     let n = epochs.len();
     debug_assert_eq!(n, values.len());
     debug_assert_eq!(n, derivatives.len());
@@ -160,6 +155,9 @@ fn hermite_interpolate_derivative(
 /// This implements the CSPICE algorithm from spkr13.c (same as spkr09.c):
 /// - For ODD window size: center around the NEAREST epoch to the query
 /// - For EVEN window size: use the LOWER bracketing epoch
+// Allow: The branches handle semantically different cases (edge vs normal) that happen
+// to return the same value. This matches CSPICE's window selection algorithm exactly.
+#[allow(clippy::if_same_then_else)]
 fn select_window(data: &Spk13Data, epoch: f64) -> Result<(usize, usize)> {
     let n = data.states.len();
     if n == 0 {

@@ -116,10 +116,22 @@ fn test_round_trip_preserves_metadata() {
         _ => panic!("Expected SPK segment"),
     };
 
-    assert_eq!(reconstructed_spk.target_code, original_target, "Target code mismatch");
-    assert_eq!(reconstructed_spk.center_code, original_center, "Center code mismatch");
-    assert_eq!(reconstructed_spk.frame_code, original_frame, "Frame code mismatch");
-    assert_eq!(reconstructed_spk.spk_type, original_type, "SPK type mismatch");
+    assert_eq!(
+        reconstructed_spk.target_code, original_target,
+        "Target code mismatch"
+    );
+    assert_eq!(
+        reconstructed_spk.center_code, original_center,
+        "Center code mismatch"
+    );
+    assert_eq!(
+        reconstructed_spk.frame_code, original_frame,
+        "Frame code mismatch"
+    );
+    assert_eq!(
+        reconstructed_spk.spk_type, original_type,
+        "SPK type mismatch"
+    );
     assert!(
         (reconstructed_spk.initial_epoch - original_initial_epoch).abs() < 1e-10,
         "Initial epoch mismatch"
@@ -185,7 +197,11 @@ fn test_round_trip_preserves_data() {
     );
 
     // Check data values (allow for floating point tolerance)
-    for (i, (orig, recon)) in original_data.iter().zip(reconstructed_spk.data.iter()).enumerate() {
+    for (i, (orig, recon)) in original_data
+        .iter()
+        .zip(reconstructed_spk.data.iter())
+        .enumerate()
+    {
         assert!(
             (orig - recon).abs() < 1e-10,
             "Data mismatch at index {}: original={}, reconstructed={}",
@@ -233,8 +249,14 @@ fn test_round_trip_preserves_header() {
     let mut daf2 = DAFFile::from_file(file2).expect("Failed to parse reconstructed DAF file");
     let reconstructed_header = daf2.daf_header().expect("Failed to get header");
 
-    assert_eq!(reconstructed_header.name, original_name, "Header name mismatch");
-    assert_eq!(reconstructed_header.kind, original_kind, "Header kind mismatch");
+    assert_eq!(
+        reconstructed_header.name, original_name,
+        "Header name mismatch"
+    );
+    assert_eq!(
+        reconstructed_header.kind, original_kind,
+        "Header kind mismatch"
+    );
 
     // Cleanup
     let _ = std::fs::remove_file(&hdf5_path);

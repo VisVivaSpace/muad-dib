@@ -39,7 +39,9 @@ pub fn write_text_pck(path: &Path, source: &PCKSource) -> Result<()> {
 /// Sources are written sequentially with their block structure preserved.
 pub fn write_text_pck_multi(path: &Path, sources: &[PCKSource]) -> Result<()> {
     if sources.is_empty() {
-        return Err(Error::EmptyData { context: "No PCK sources to write".into() });
+        return Err(Error::EmptyData {
+            context: "No PCK sources to write".into(),
+        });
     }
 
     // If only one source, use simple write

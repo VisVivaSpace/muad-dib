@@ -80,10 +80,7 @@ fn test_parse_big_endian_spk() {
         DAFSegment::SPK(spk) => {
             assert_eq!(spk.target_code, -10000001);
             // Verify data is reasonable (not garbled by endian issues)
-            assert!(
-                spk.initial_epoch > 0.0,
-                "Initial epoch should be positive"
-            );
+            assert!(spk.initial_epoch > 0.0, "Initial epoch should be positive");
             assert!(
                 spk.final_epoch > spk.initial_epoch,
                 "Final epoch should be after initial"
@@ -99,8 +96,7 @@ fn test_parse_big_endian_spk() {
 /// which may not be fully supported yet.
 #[test]
 fn test_parse_variable_segment_hermite() {
-    let file =
-        File::open("test_data/variable-seg-size-hermite.bsp").expect("Could not open file");
+    let file = File::open("test_data/variable-seg-size-hermite.bsp").expect("Could not open file");
     let daf = DAFFile::from_file(file).expect("Failed to parse DAF file");
 
     // Verify we can at least read the file header
@@ -210,8 +206,14 @@ fn test_gmat_spk_consistency() {
     for (h, l) in hermite_segs.iter().zip(lagrange_segs.iter()) {
         match (h, l) {
             (DAFSegment::SPK(h_spk), DAFSegment::SPK(l_spk)) => {
-                assert_eq!(h_spk.target_code, l_spk.target_code, "Target codes should match");
-                assert_eq!(h_spk.center_code, l_spk.center_code, "Center codes should match");
+                assert_eq!(
+                    h_spk.target_code, l_spk.target_code,
+                    "Target codes should match"
+                );
+                assert_eq!(
+                    h_spk.center_code, l_spk.center_code,
+                    "Center codes should match"
+                );
                 // Epochs should be very close (same simulation)
                 assert!(
                     (h_spk.initial_epoch - l_spk.initial_epoch).abs() < 1.0,
@@ -368,7 +370,10 @@ fn test_spice_kernel_load_ck() {
 
     assert!(!kernel.is_empty());
     let instruments = kernel.ck_instruments();
-    assert!(!instruments.is_empty(), "Should have at least one instrument");
+    assert!(
+        !instruments.is_empty(),
+        "Should have at least one instrument"
+    );
 }
 
 /// Test loading mixed SPK and CK files
@@ -409,7 +414,11 @@ fn test_parse_bpc_earth() {
         match seg {
             DAFSegment::BPCK(bpck) => {
                 // Earth body-fixed frame (ITRF93 or similar)
-                assert_eq!(bpck.frame_id, 3000, "Segment {} should have frame_id 3000", i);
+                assert_eq!(
+                    bpck.frame_id, 3000,
+                    "Segment {} should have frame_id 3000",
+                    i
+                );
                 // Base frame should be J2000 (1) or ICRF (17)
                 assert!(
                     bpck.base_frame == 1 || bpck.base_frame == 17,
@@ -452,7 +461,11 @@ fn test_parse_bpc_moon() {
         match seg {
             DAFSegment::BPCK(bpck) => {
                 // Moon principal axes frame
-                assert_eq!(bpck.frame_id, 31008, "Segment {} should have frame_id 31008", i);
+                assert_eq!(
+                    bpck.frame_id, 31008,
+                    "Segment {} should have frame_id 31008",
+                    i
+                );
                 // Data should be valid
                 assert!(
                     bpck.data_end >= bpck.data_start,
@@ -470,7 +483,8 @@ fn test_parse_bpc_moon() {
 fn test_bpc_segment_consistency() {
     // Parse both Earth BPC files
     let earth1 = File::open("test_data/earth_latest_high_prec.bpc").expect("Could not open file");
-    let earth2 = File::open("test_data/earth_longterm_000101_251211_250915.bpc").expect("Could not open file");
+    let earth2 = File::open("test_data/earth_longterm_000101_251211_250915.bpc")
+        .expect("Could not open file");
 
     let daf1 = DAFFile::from_file(earth1).expect("Failed to parse DAF");
     let daf2 = DAFFile::from_file(earth2).expect("Failed to parse DAF");

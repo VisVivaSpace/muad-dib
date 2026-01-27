@@ -214,13 +214,7 @@ pub fn cspice_et2utc(et: f64, format: &str, precision: i32) -> String {
     let mut buffer = vec![0i8; 64];
     unsafe {
         reset_c();
-        et2utc_c(
-            et,
-            c_format.as_ptr(),
-            precision,
-            64,
-            buffer.as_mut_ptr(),
-        );
+        et2utc_c(et, c_format.as_ptr(), precision, 64, buffer.as_mut_ptr());
         if failed_c() != 0 {
             reset_c();
             panic!("CSPICE et2utc_c failed for et={}", et);

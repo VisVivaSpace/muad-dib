@@ -71,26 +71,17 @@ impl PCKVariable {
     /// Returns all values as f64 if all values are numeric.
     /// Returns None if any value is non-numeric.
     pub fn values_as_f64(&self) -> Option<Vec<f64>> {
-        self.values
-            .iter()
-            .map(|v| v.as_numeric())
-            .collect()
+        self.values.iter().map(|v| v.as_numeric()).collect()
     }
 
     /// Returns only the numeric values, filtering out epochs and text.
     pub fn numeric_values(&self) -> Vec<f64> {
-        self.values
-            .iter()
-            .filter_map(|v| v.as_numeric())
-            .collect()
+        self.values.iter().filter_map(|v| v.as_numeric()).collect()
     }
 
     /// Returns only the text/epoch values as string references.
     pub fn text_values(&self) -> Vec<&str> {
-        self.values
-            .iter()
-            .filter_map(|v| v.as_string())
-            .collect()
+        self.values.iter().filter_map(|v| v.as_string()).collect()
     }
 
     /// Returns true if all values are numeric.
@@ -405,7 +396,10 @@ impl PCKSource {
         }
 
         let rest = &name[4..]; // Skip "BODY"
-        let id_part: String = rest.chars().take_while(|c| c.is_ascii_digit() || *c == '-').collect();
+        let id_part: String = rest
+            .chars()
+            .take_while(|c| c.is_ascii_digit() || *c == '-')
+            .collect();
 
         id_part.parse::<i32>().ok()
     }

@@ -41,14 +41,14 @@ fn assert_angle_close(a: f64, b: f64, tolerance: f64, msg: &str) {
 
 /// Test points covering various coordinate configurations.
 const TEST_POINTS: [[f64; 3]; 8] = [
-    [6378.0, 0.0, 0.0],        // +X axis
-    [0.0, 6378.0, 0.0],        // +Y axis
-    [0.0, 0.0, 6378.0],        // +Z (north pole)
-    [0.0, 0.0, -6378.0],       // -Z (south pole)
-    [1000.0, 2000.0, 3000.0],  // General point
-    [-5000.0, -5000.0, 0.0],   // Negative XY
-    [100.0, -200.0, 300.0],    // Mixed signs
-    [1.0, 1.0, 1.0],           // Small values
+    [6378.0, 0.0, 0.0],       // +X axis
+    [0.0, 6378.0, 0.0],       // +Y axis
+    [0.0, 0.0, 6378.0],       // +Z (north pole)
+    [0.0, 0.0, -6378.0],      // -Z (south pole)
+    [1000.0, 2000.0, 3000.0], // General point
+    [-5000.0, -5000.0, 0.0],  // Negative XY
+    [100.0, -200.0, 300.0],   // Mixed signs
+    [1.0, 1.0, 1.0],          // Small values
 ];
 
 // ============================================================================
@@ -96,12 +96,12 @@ fn validate_latitudinal_to_rectangular() {
 
     // Test values: (radius, longitude, latitude)
     let test_values: [(f64, f64, f64); 6] = [
-        (6378.0, 0.0, 0.0),                       // Equator, prime meridian
-        (6378.0, std::f64::consts::FRAC_PI_2, 0.0), // Equator, 90° E
-        (6378.0, 0.0, std::f64::consts::FRAC_PI_2), // North pole
+        (6378.0, 0.0, 0.0),                          // Equator, prime meridian
+        (6378.0, std::f64::consts::FRAC_PI_2, 0.0),  // Equator, 90° E
+        (6378.0, 0.0, std::f64::consts::FRAC_PI_2),  // North pole
         (6378.0, 0.0, -std::f64::consts::FRAC_PI_2), // South pole
-        (1000.0, 0.5, 0.3),                       // General point
-        (5000.0, -2.0, -0.5),                     // Negative angles
+        (1000.0, 0.5, 0.3),                          // General point
+        (5000.0, -2.0, -0.5),                        // Negative angles
     ];
 
     for (radius, lon, lat_angle) in test_values.iter() {
@@ -138,7 +138,12 @@ fn validate_latitudinal_round_trip() {
         let back: Rectangular = lat.into();
 
         // Compare with original
-        assert_vector_close(&back.0, point, COORD_TOLERANCE, &format!("round-trip for {:?}", point));
+        assert_vector_close(
+            &back.0,
+            point,
+            COORD_TOLERANCE,
+            &format!("round-trip for {:?}", point),
+        );
 
         // Also compare CSPICE round-trip
         let (r, lon, lat_angle) = cspice_reclat(point);
@@ -200,7 +205,11 @@ fn validate_spherical_to_rectangular() {
         (6378.0, std::f64::consts::FRAC_PI_2, 0.0), // Equator, prime meridian
         (6378.0, 0.0, 0.0),                         // North pole
         (6378.0, std::f64::consts::PI, 0.0),        // South pole
-        (6378.0, std::f64::consts::FRAC_PI_2, std::f64::consts::FRAC_PI_2), // Equator, 90° E
+        (
+            6378.0,
+            std::f64::consts::FRAC_PI_2,
+            std::f64::consts::FRAC_PI_2,
+        ), // Equator, 90° E
         (1000.0, 0.8, 0.5),                         // General point
         (5000.0, 2.0, -1.5),                        // Other general point
     ];
@@ -239,7 +248,12 @@ fn validate_spherical_round_trip() {
         let back: Rectangular = sph.into();
 
         // Compare with original
-        assert_vector_close(&back.0, point, COORD_TOLERANCE, &format!("round-trip for {:?}", point));
+        assert_vector_close(
+            &back.0,
+            point,
+            COORD_TOLERANCE,
+            &format!("round-trip for {:?}", point),
+        );
 
         // Also compare CSPICE round-trip
         let (r, colat, lon) = cspice_recsph(point);
@@ -303,7 +317,7 @@ fn validate_cylindrical_to_rectangular() {
         (0.0, 0.0, 6378.0),                         // On Z axis (north)
         (1000.0, 0.5, 2000.0),                      // General point
         (3000.0, -1.0, -500.0),                     // Negative z and angle
-        (100.0, std::f64::consts::PI, 100.0),      // 180 degrees
+        (100.0, std::f64::consts::PI, 100.0),       // 180 degrees
     ];
 
     for (r, lon, z) in test_values.iter() {
@@ -335,7 +349,12 @@ fn validate_cylindrical_round_trip() {
         let back: Rectangular = cyl.into();
 
         // Compare with original
-        assert_vector_close(&back.0, point, COORD_TOLERANCE, &format!("round-trip for {:?}", point));
+        assert_vector_close(
+            &back.0,
+            point,
+            COORD_TOLERANCE,
+            &format!("round-trip for {:?}", point),
+        );
 
         // Also compare CSPICE round-trip
         let (r, lon, z) = cspice_reccyl(point);
@@ -383,15 +402,30 @@ fn validate_poles() {
     let (cspice_r, cspice_colat, _) = cspice_recsph(&north);
     let sph = Rectangular(north).to_spherical();
     assert_close(sph.radius, cspice_r, COORD_TOLERANCE, "north pole radius");
-    assert_close(sph.colatitude, cspice_colat, COORD_TOLERANCE, "north pole colatitude");
-    assert_close(sph.colatitude, 0.0, COORD_TOLERANCE, "north pole should be at colatitude 0");
+    assert_close(
+        sph.colatitude,
+        cspice_colat,
+        COORD_TOLERANCE,
+        "north pole colatitude",
+    );
+    assert_close(
+        sph.colatitude,
+        0.0,
+        COORD_TOLERANCE,
+        "north pole should be at colatitude 0",
+    );
 
     // South pole
     let south = [0.0, 0.0, -6378.0];
     let (cspice_r, cspice_colat, _) = cspice_recsph(&south);
     let sph = Rectangular(south).to_spherical();
     assert_close(sph.radius, cspice_r, COORD_TOLERANCE, "south pole radius");
-    assert_close(sph.colatitude, cspice_colat, COORD_TOLERANCE, "south pole colatitude");
+    assert_close(
+        sph.colatitude,
+        cspice_colat,
+        COORD_TOLERANCE,
+        "south pole colatitude",
+    );
     assert_close(
         sph.colatitude,
         std::f64::consts::PI,
@@ -411,8 +445,18 @@ fn validate_axes() {
     assert_close(muad.radius, r, COORD_TOLERANCE, "+X radius");
     assert_angle_close(muad.longitude, lon, COORD_TOLERANCE, "+X longitude");
     assert_close(muad.latitude, lat, COORD_TOLERANCE, "+X latitude");
-    assert_angle_close(muad.longitude, 0.0, COORD_TOLERANCE, "+X should have longitude 0");
-    assert_close(muad.latitude, 0.0, COORD_TOLERANCE, "+X should have latitude 0");
+    assert_angle_close(
+        muad.longitude,
+        0.0,
+        COORD_TOLERANCE,
+        "+X should have longitude 0",
+    );
+    assert_close(
+        muad.latitude,
+        0.0,
+        COORD_TOLERANCE,
+        "+X should have latitude 0",
+    );
 
     // +Y axis
     let y_point = [0.0, 1000.0, 0.0];

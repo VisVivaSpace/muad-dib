@@ -95,9 +95,8 @@ impl<'a> SpkSegmentView<'a> {
     ///
     /// The data is parsed on first access and cached.
     pub fn data(&self) -> &SpkData {
-        self.parsed_data.get_or_init(|| {
-            parse_spk_data(self.segment.spk_type, self.segment.data.clone())
-        })
+        self.parsed_data
+            .get_or_init(|| parse_spk_data(self.segment.spk_type, self.segment.data.clone()))
     }
 
     /// Get the raw data without parsing.
@@ -137,8 +136,8 @@ mod tests {
             data_end: 12,
             data: vec![
                 // Record 1 (degree 1, 2 coefficients per axis)
-                100.0,    // MID
-                50.0,     // RADIUS
+                100.0, // MID
+                50.0,  // RADIUS
                 1.0, 2.0, // X coefficients
                 3.0, 4.0, // Y coefficients
                 5.0, 6.0, // Z coefficients

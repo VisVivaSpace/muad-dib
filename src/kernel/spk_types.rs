@@ -34,10 +34,7 @@ pub enum SpkData {
     /// SPK Type 13: Hermite interpolation (unequally spaced states)
     Type13(Spk13Data),
     /// Raw/unparsed data for unsupported SPK types
-    Raw {
-        spk_type: i32,
-        data: Vec<f64>,
-    },
+    Raw { spk_type: i32, data: Vec<f64> },
 }
 
 impl SpkData {

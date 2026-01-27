@@ -94,7 +94,10 @@ pub fn read_sources(path: &Path) -> Result<Vec<DAFSource>> {
         "msgpack" | "mp" => msgpack::read_msgpack(path),
         "bson" => bson::read_bson(path),
         _ => Err(crate::error::Error::UnknownFormat {
-            format: format!("file format '{}'. Supported: hdf5, parquet, arrow, msgpack, bson", ext)
+            format: format!(
+                "file format '{}'. Supported: hdf5, parquet, arrow, msgpack, bson",
+                ext
+            ),
         }),
     }
 }

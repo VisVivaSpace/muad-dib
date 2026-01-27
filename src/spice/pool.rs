@@ -107,8 +107,8 @@ impl KernelPoolExt for SpiceKernel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::text_pck::{KernelValue, PCKBlock, PCKSource, PCKVariable};
     use crate::kernel::CoverageIndex;
+    use crate::text_pck::{KernelValue, PCKBlock, PCKSource, PCKVariable};
 
     /// Create a test kernel with sample PCK data.
     fn make_test_kernel() -> SpiceKernel {

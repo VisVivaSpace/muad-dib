@@ -10,8 +10,10 @@ use hdf5::File as H5File;
 /// Read multiple DAF sources from a single HDF5 file.
 /// Returns an empty vector if the "sources" group doesn't exist (e.g., PCK-only files).
 pub fn read_hdf5(path: &std::path::Path) -> Result<Vec<DAFSource>> {
-    let file =
-        H5File::open(path).map_err(|e| Error::Hdf5 { operation: "open".into(), message: e.to_string() })?;
+    let file = H5File::open(path).map_err(|e| Error::Hdf5 {
+        operation: "open".into(),
+        message: e.to_string(),
+    })?;
 
     // Check if sources group exists - it may not if the file only contains PCK data
     let sources_group = match file.group("sources") {
@@ -22,14 +24,16 @@ pub fn read_hdf5(path: &std::path::Path) -> Result<Vec<DAFSource>> {
     let mut sources = Vec::new();
 
     // Get all source groups
-    let source_names = sources_group
-        .member_names()
-        .map_err(|e| Error::Hdf5 { operation: "member_names".into(), message: e.to_string() })?;
+    let source_names = sources_group.member_names().map_err(|e| Error::Hdf5 {
+        operation: "member_names".into(),
+        message: e.to_string(),
+    })?;
 
     for src_name in source_names {
-        let src_group = sources_group
-            .group(&src_name)
-            .map_err(|e| Error::Hdf5 { operation: "group".into(), message: e.to_string() })?;
+        let src_group = sources_group.group(&src_name).map_err(|e| Error::Hdf5 {
+            operation: "group".into(),
+            message: e.to_string(),
+        })?;
 
         // Read header attributes
         let name = read_string_attr(&src_group, "name")?;
@@ -37,7 +41,11 @@ pub fn read_hdf5(path: &std::path::Path) -> Result<Vec<DAFSource>> {
         let comment = read_string_attr(&src_group, "comment")?;
         let filename = read_string_attr(&src_group, "filename")?;
 
-        let header = DAFHeader { name, comment, kind };
+        let header = DAFHeader {
+            name,
+            comment,
+            kind,
+        };
 
         // Read metadata attributes
         let nd = read_u64_attr(&src_group, "nd")?;
@@ -46,9 +54,7 @@ pub fn read_hdf5(path: &std::path::Path) -> Result<Vec<DAFSource>> {
         let endian = match endian_str.as_str() {
             "LTL-IEEE" => Endian::Little,
             "BIG-IEEE" => Endian::Big,
-            _ => {
-                return Err(Error::UnknownFormat { format: endian_str })
-            }
+            _ => return Err(Error::UnknownFormat { format: endian_str }),
         };
         let fward = read_u64_attr(&src_group, "fward")?;
         let bward = read_u64_attr(&src_group, "bward")?;
@@ -66,19 +72,22 @@ pub fn read_hdf5(path: &std::path::Path) -> Result<Vec<DAFSource>> {
         };
 
         // Read segments
-        let segs_group = src_group
-            .group("segments")
-            .map_err(|e| Error::Hdf5 { operation: "group".into(), message: e.to_string() })?;
+        let segs_group = src_group.group("segments").map_err(|e| Error::Hdf5 {
+            operation: "group".into(),
+            message: e.to_string(),
+        })?;
 
-        let segment_names = segs_group
-            .member_names()
-            .map_err(|e| Error::Hdf5 { operation: "member_names".into(), message: e.to_string() })?;
+        let segment_names = segs_group.member_names().map_err(|e| Error::Hdf5 {
+            operation: "member_names".into(),
+            message: e.to_string(),
+        })?;
 
         let mut segments = Vec::new();
         for seg_name in segment_names {
-            let seg_group = segs_group
-                .group(&seg_name)
-                .map_err(|e| Error::Hdf5 { operation: "group".into(), message: e.to_string() })?;
+            let seg_group = segs_group.group(&seg_name).map_err(|e| Error::Hdf5 {
+                operation: "group".into(),
+                message: e.to_string(),
+            })?;
 
             let segment = read_segment(&seg_group)?;
             segments.push(segment);
@@ -99,8 +108,10 @@ pub fn read_hdf5(path: &std::path::Path) -> Result<Vec<DAFSource>> {
 ///
 /// PCK sources are stored in a "pck" group, separate from DAF sources.
 pub fn read_pck_sources(path: &std::path::Path) -> Result<Vec<PCKSource>> {
-    let file =
-        H5File::open(path).map_err(|e| Error::Hdf5 { operation: "open".into(), message: e.to_string() })?;
+    let file = H5File::open(path).map_err(|e| Error::Hdf5 {
+        operation: "open".into(),
+        message: e.to_string(),
+    })?;
 
     // Check if pck group exists
     let pck_group = match file.group("pck") {
@@ -111,14 +122,16 @@ pub fn read_pck_sources(path: &std::path::Path) -> Result<Vec<PCKSource>> {
     let mut sources = Vec::new();
 
     // Get all source groups
-    let source_names = pck_group
-        .member_names()
-        .map_err(|e| Error::Hdf5 { operation: "member_names".into(), message: e.to_string() })?;
+    let source_names = pck_group.member_names().map_err(|e| Error::Hdf5 {
+        operation: "member_names".into(),
+        message: e.to_string(),
+    })?;
 
     for src_name in source_names {
-        let src_group = pck_group
-            .group(&src_name)
-            .map_err(|e| Error::Hdf5 { operation: "group".into(), message: e.to_string() })?;
+        let src_group = pck_group.group(&src_name).map_err(|e| Error::Hdf5 {
+            operation: "group".into(),
+            message: e.to_string(),
+        })?;
 
         let filename = read_string_attr(&src_group, "filename")?;
         let block_count = read_i32_attr(&src_group, "block_count")? as usize;
@@ -127,9 +140,13 @@ pub fn read_pck_sources(path: &std::path::Path) -> Result<Vec<PCKSource>> {
 
         // Read blocks in order
         for i in 0..block_count {
-            let block_group = src_group
-                .group(&format!("block_{:03}", i))
-                .map_err(|e| Error::Hdf5 { operation: "group".into(), message: e.to_string() })?;
+            let block_group =
+                src_group
+                    .group(&format!("block_{:03}", i))
+                    .map_err(|e| Error::Hdf5 {
+                        operation: "group".into(),
+                        message: e.to_string(),
+                    })?;
 
             let block_type = read_string_attr(&block_group, "type")?;
 
@@ -143,7 +160,9 @@ pub fn read_pck_sources(path: &std::path::Path) -> Result<Vec<PCKSource>> {
                     PCKBlock::Data(vars)
                 }
                 _ => {
-                    return Err(Error::UnknownFormat { format: format!("PCK block type: {}", block_type) })
+                    return Err(Error::UnknownFormat {
+                        format: format!("PCK block type: {}", block_type),
+                    })
                 }
             };
 
@@ -168,7 +187,10 @@ fn read_pck_variables(group: &hdf5::Group) -> Result<Vec<PCKVariable>> {
     for i in 0..var_count {
         let var_group = group
             .group(&format!("var_{:03}", i))
-            .map_err(|e| Error::Hdf5 { operation: "group".into(), message: e.to_string() })?;
+            .map_err(|e| Error::Hdf5 {
+                operation: "group".into(),
+                message: e.to_string(),
+            })?;
 
         let name = read_string_attr(&var_group, "name")?;
 
@@ -186,9 +208,13 @@ fn read_pck_variables(group: &hdf5::Group) -> Result<Vec<PCKVariable>> {
             let mut values = Vec::with_capacity(value_count);
 
             for j in 0..value_count {
-                let val_group = var_group
-                    .group(&format!("val_{:03}", j))
-                    .map_err(|e| Error::Hdf5 { operation: "group".into(), message: e.to_string() })?;
+                let val_group =
+                    var_group
+                        .group(&format!("val_{:03}", j))
+                        .map_err(|e| Error::Hdf5 {
+                            operation: "group".into(),
+                            message: e.to_string(),
+                        })?;
 
                 let val_type = read_string_attr(&val_group, "type")?;
                 let value = match val_type.as_str() {
@@ -205,7 +231,9 @@ fn read_pck_variables(group: &hdf5::Group) -> Result<Vec<PCKVariable>> {
                         KernelValue::Text(s)
                     }
                     _ => {
-                        return Err(Error::UnknownFormat { format: format!("value type: {}", val_type) })
+                        return Err(Error::UnknownFormat {
+                            format: format!("value type: {}", val_type),
+                        })
                     }
                 };
                 values.push(value);
@@ -226,7 +254,9 @@ fn read_segment(group: &hdf5::Group) -> Result<DAFSegment> {
         "SPK" => read_spk_segment(group),
         "CK" => read_ck_segment(group),
         "BPCK" => read_bpck_segment(group),
-        _ => Err(Error::UnknownFormat { format: format!("segment type: {}", segment_type) }),
+        _ => Err(Error::UnknownFormat {
+            format: format!("segment type: {}", segment_type),
+        }),
     }
 }
 
@@ -307,61 +337,73 @@ fn read_bpck_segment(group: &hdf5::Group) -> Result<DAFSegment> {
 }
 
 fn read_string_attr(group: &hdf5::Group, name: &str) -> Result<String> {
-    let attr = group
-        .attr(name)
-        .map_err(|e| Error::Hdf5 { operation: format!("attr '{}'", name), message: e.to_string() })?;
-    let value: VarLenUnicode = attr
-        .read_scalar()
-        .map_err(|e| Error::Hdf5 { operation: format!("read '{}'", name), message: e.to_string() })?;
+    let attr = group.attr(name).map_err(|e| Error::Hdf5 {
+        operation: format!("attr '{}'", name),
+        message: e.to_string(),
+    })?;
+    let value: VarLenUnicode = attr.read_scalar().map_err(|e| Error::Hdf5 {
+        operation: format!("read '{}'", name),
+        message: e.to_string(),
+    })?;
     Ok(value.to_string())
 }
 
 fn read_i32_attr(group: &hdf5::Group, name: &str) -> Result<i32> {
-    let attr = group
-        .attr(name)
-        .map_err(|e| Error::Hdf5 { operation: format!("attr '{}'", name), message: e.to_string() })?;
-    let value: i32 = attr
-        .read_scalar()
-        .map_err(|e| Error::Hdf5 { operation: format!("read '{}'", name), message: e.to_string() })?;
+    let attr = group.attr(name).map_err(|e| Error::Hdf5 {
+        operation: format!("attr '{}'", name),
+        message: e.to_string(),
+    })?;
+    let value: i32 = attr.read_scalar().map_err(|e| Error::Hdf5 {
+        operation: format!("read '{}'", name),
+        message: e.to_string(),
+    })?;
     Ok(value)
 }
 
 fn read_u64_attr(group: &hdf5::Group, name: &str) -> Result<u64> {
-    let attr = group
-        .attr(name)
-        .map_err(|e| Error::Hdf5 { operation: format!("attr '{}'", name), message: e.to_string() })?;
-    let value: u64 = attr
-        .read_scalar()
-        .map_err(|e| Error::Hdf5 { operation: format!("read '{}'", name), message: e.to_string() })?;
+    let attr = group.attr(name).map_err(|e| Error::Hdf5 {
+        operation: format!("attr '{}'", name),
+        message: e.to_string(),
+    })?;
+    let value: u64 = attr.read_scalar().map_err(|e| Error::Hdf5 {
+        operation: format!("read '{}'", name),
+        message: e.to_string(),
+    })?;
     Ok(value)
 }
 
 fn read_f64_attr(group: &hdf5::Group, name: &str) -> Result<f64> {
-    let attr = group
-        .attr(name)
-        .map_err(|e| Error::Hdf5 { operation: format!("attr '{}'", name), message: e.to_string() })?;
-    let value: f64 = attr
-        .read_scalar()
-        .map_err(|e| Error::Hdf5 { operation: format!("read '{}'", name), message: e.to_string() })?;
+    let attr = group.attr(name).map_err(|e| Error::Hdf5 {
+        operation: format!("attr '{}'", name),
+        message: e.to_string(),
+    })?;
+    let value: f64 = attr.read_scalar().map_err(|e| Error::Hdf5 {
+        operation: format!("read '{}'", name),
+        message: e.to_string(),
+    })?;
     Ok(value)
 }
 
 fn read_bool_attr(group: &hdf5::Group, name: &str) -> Result<bool> {
-    let attr = group
-        .attr(name)
-        .map_err(|e| Error::Hdf5 { operation: format!("attr '{}'", name), message: e.to_string() })?;
-    let value: bool = attr
-        .read_scalar()
-        .map_err(|e| Error::Hdf5 { operation: format!("read '{}'", name), message: e.to_string() })?;
+    let attr = group.attr(name).map_err(|e| Error::Hdf5 {
+        operation: format!("attr '{}'", name),
+        message: e.to_string(),
+    })?;
+    let value: bool = attr.read_scalar().map_err(|e| Error::Hdf5 {
+        operation: format!("read '{}'", name),
+        message: e.to_string(),
+    })?;
     Ok(value)
 }
 
 fn read_f64_dataset(group: &hdf5::Group, name: &str) -> Result<Vec<f64>> {
-    let dataset = group
-        .dataset(name)
-        .map_err(|e| Error::Hdf5 { operation: format!("dataset '{}'", name), message: e.to_string() })?;
-    let data: Vec<f64> = dataset
-        .read_raw()
-        .map_err(|e| Error::Hdf5 { operation: format!("read '{}'", name), message: e.to_string() })?;
+    let dataset = group.dataset(name).map_err(|e| Error::Hdf5 {
+        operation: format!("dataset '{}'", name),
+        message: e.to_string(),
+    })?;
+    let data: Vec<f64> = dataset.read_raw().map_err(|e| Error::Hdf5 {
+        operation: format!("read '{}'", name),
+        message: e.to_string(),
+    })?;
     Ok(data)
 }

@@ -61,7 +61,10 @@ fn display_combined(summaries: &[FileSummary], opts: &BriefOptions) {
     objects.sort_by_key(|o| o.id);
 
     // Determine file type from first object, default to SPK
-    let file_type = objects.first().map(|o| o.file_type).unwrap_or(FileType::SPK);
+    let file_type = objects
+        .first()
+        .map(|o| o.file_type)
+        .unwrap_or(FileType::SPK);
 
     if opts.tabular {
         display_tabular(&objects, file_type, opts);
@@ -96,7 +99,8 @@ fn display_tabular(objects: &[ObjectSummary], file_type: FileType, opts: &BriefO
         };
 
         let frame_str = if opts.show_rel_frame {
-            obj.frame_code.map(|fc| format_frame_id(fc, opts.numeric_only))
+            obj.frame_code
+                .map(|fc| format_frame_id(fc, opts.numeric_only))
         } else {
             None
         };
@@ -107,7 +111,9 @@ fn display_tabular(objects: &[ObjectSummary], file_type: FileType, opts: &BriefO
 
             // For CK files, show angular velocity indicator
             let av_str = if is_ck {
-                interval.has_rates.map(|r| if r { "Y" } else { "N" }.to_string())
+                interval
+                    .has_rates
+                    .map(|r| if r { "Y" } else { "N" }.to_string())
             } else {
                 None
             };
@@ -144,7 +150,12 @@ fn display_tabular(objects: &[ObjectSummary], file_type: FileType, opts: &BriefO
     let id_label = if is_ck { "Instruments" } else { "Bodies" };
     let time_label = if is_ck { "SCLK" } else { "ET" };
 
-    let id_width = rows.iter().map(|r| r.id_str.len()).max().unwrap_or(6).max(id_label.len());
+    let id_width = rows
+        .iter()
+        .map(|r| r.id_str.len())
+        .max()
+        .unwrap_or(6)
+        .max(id_label.len());
     let frame_width = if opts.show_rel_frame {
         rows.iter()
             .filter_map(|r| r.frame_str.as_ref())
@@ -156,7 +167,12 @@ fn display_tabular(objects: &[ObjectSummary], file_type: FileType, opts: &BriefO
         0
     };
     let type_width = if opts.show_types { 4 } else { 0 }; // "Type" header
-    let time_width = rows.iter().map(|r| r.start.len()).max().unwrap_or(24).max(24);
+    let time_width = rows
+        .iter()
+        .map(|r| r.start.len())
+        .max()
+        .unwrap_or(24)
+        .max(24);
 
     // Print header
     let start_header = format!("Start of Interval ({})", time_label);
@@ -194,11 +210,19 @@ fn display_tabular(objects: &[ObjectSummary], file_type: FileType, opts: &BriefO
         let mut row_parts = vec![format!("{:<iw$}", row.id_str, iw = id_width)];
 
         if opts.show_types {
-            row_parts.push(format!("{:>yw$}", row.type_str.as_deref().unwrap_or(""), yw = type_width));
+            row_parts.push(format!(
+                "{:>yw$}",
+                row.type_str.as_deref().unwrap_or(""),
+                yw = type_width
+            ));
         }
 
         if opts.show_rel_frame && is_ck {
-            row_parts.push(format!("{:<fw$}", row.frame_str.as_deref().unwrap_or(""), fw = frame_width));
+            row_parts.push(format!(
+                "{:<fw$}",
+                row.frame_str.as_deref().unwrap_or(""),
+                fw = frame_width
+            ));
         }
 
         if is_ck {
@@ -228,10 +252,7 @@ fn display_grouped(objects: &[ObjectSummary], file_type: FileType, opts: &BriefO
         group_by_coverage(objects)
     } else {
         // Each object in its own group
-        objects
-            .iter()
-            .map(|o| vec![o.clone()])
-            .collect()
+        objects.iter().map(|o| vec![o.clone()]).collect()
     };
 
     for group in groups {
@@ -268,19 +289,10 @@ fn display_grouped(objects: &[ObjectSummary], file_type: FileType, opts: &BriefO
                 "        {:^27}     {:^27}  {:>4}",
                 start_header, end_header, "Type"
             );
-            println!(
-                "        {:->27}     {:->27}  {:->4}",
-                "", "", ""
-            );
+            println!("        {:->27}     {:->27}  {:->4}", "", "", "");
         } else {
-            println!(
-                "        {:^27}     {:^27}",
-                start_header, end_header
-            );
-            println!(
-                "        {:->27}     {:->27}",
-                "", ""
-            );
+            println!("        {:^27}     {:^27}", start_header, end_header);
+            println!("        {:->27}     {:->27}", "", "");
         }
 
         // Print each interval

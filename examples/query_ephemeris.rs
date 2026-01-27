@@ -60,7 +60,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("=== SPK Ephemeris Query Example ===\n");
     println!("SPK file: {}", spk_path);
-    println!("Epoch: {} (TDB = {:.3} s)\n", format_iso8601(epoch.0), epoch.0);
+    println!(
+        "Epoch: {} (TDB = {:.3} s)\n",
+        format_iso8601(epoch.0),
+        epoch.0
+    );
 
     // Load the kernel
     let kernel = SpiceKernel::load(spk_path)?;
@@ -93,7 +97,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let pos = Rectangular(state.position);
                     let lat = pos.to_latitudinal();
 
-                    println!("  Target {} -> Center {} (frame {}):", state.target, state.center, state.frame);
+                    println!(
+                        "  Target {} -> Center {} (frame {}):",
+                        state.target, state.center, state.frame
+                    );
                     println!(
                         "    Position: [{:>15.3}, {:>15.3}, {:>15.3}] km",
                         state.position[0], state.position[1], state.position[2]
@@ -103,15 +110,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         state.velocity[0], state.velocity[1], state.velocity[2]
                     );
 
-                    let distance =
-                        (state.position[0].powi(2) + state.position[1].powi(2) + state.position[2].powi(2))
-                            .sqrt();
+                    let distance = (state.position[0].powi(2)
+                        + state.position[1].powi(2)
+                        + state.position[2].powi(2))
+                    .sqrt();
                     let speed = (state.velocity[0].powi(2)
                         + state.velocity[1].powi(2)
                         + state.velocity[2].powi(2))
                     .sqrt();
 
-                    println!("    Distance: {:.3} km ({:.6} AU)", distance, distance / 149597870.7);
+                    println!(
+                        "    Distance: {:.3} km ({:.6} AU)",
+                        distance,
+                        distance / 149597870.7
+                    );
                     println!("    Speed: {:.6} km/s", speed);
                     println!(
                         "    Lat/Lon: {:.3} deg / {:.3} deg",
@@ -133,8 +145,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match kernel.state_of(NaifId::EARTH, epoch, NaifId::SSB) {
         Ok(state) => {
-            println!("  State context: target={}, center={}, frame={}", state.target, state.center, state.frame);
-            println!("  Earth-SSB distance: {:.3} km ({:.6} AU)", state.distance(), state.distance() / 149597870.7);
+            println!(
+                "  State context: target={}, center={}, frame={}",
+                state.target, state.center, state.frame
+            );
+            println!(
+                "  Earth-SSB distance: {:.3} km ({:.6} AU)",
+                state.distance(),
+                state.distance() / 149597870.7
+            );
         }
         Err(e) => {
             println!("  Could not query Earth: {:?}", e);

@@ -182,13 +182,7 @@ impl CspiceDAF {
                 // Unpack summary
                 let mut dc = vec![0.0f64; nd as usize];
                 let mut ic = vec![0i32; ni as usize];
-                dafus_c(
-                    sum.as_ptr(),
-                    nd,
-                    ni,
-                    dc.as_mut_ptr(),
-                    ic.as_mut_ptr(),
-                );
+                dafus_c(sum.as_ptr(), nd, ni, dc.as_mut_ptr(), ic.as_mut_ptr());
 
                 segments.push(SegmentSummary { dc, ic });
             }
@@ -399,8 +393,10 @@ fn validate_segment_summaries_match_cspice() {
         "Segment count mismatch before comparison"
     );
 
-    for (i, (despice_seg, cspice_sum)) in
-        despice_segments.iter().zip(cspice_segments.iter()).enumerate()
+    for (i, (despice_seg, cspice_sum)) in despice_segments
+        .iter()
+        .zip(cspice_segments.iter())
+        .enumerate()
     {
         let spk = match despice_seg {
             DAFSegment::SPK(s) => s,

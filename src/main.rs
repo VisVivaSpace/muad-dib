@@ -96,31 +96,24 @@ fn main() {
         match ext.as_str() {
             // Text kernel files - parse to PCKSource (not DAFSource)
             // Includes PCK, LSK, SCLK, and FK files
-            "tpc" | "pck" | "tls" | "tsc" | "tf" => {
-                match PCKSource::from_path(infile) {
-                    Ok(pck) => {
-                        let var_count = pck.variables().len();
-                        total_pck_vars += var_count;
-                        let kind = match ext.as_str() {
-                            "tls" => "LSK",
-                            "tsc" => "SCLK",
-                            "tf" => "FK",
-                            _ => "PCK",
-                        };
-                        println!(
-                            "  {} ({}): {} variables",
-                            infile.display(),
-                            kind,
-                            var_count
-                        );
-                        pck_sources.push(pck);
-                    }
-                    Err(why) => {
-                        eprintln!("Error: couldn't parse {}: {}", infile.display(), why);
-                        std::process::exit(1);
-                    }
+            "tpc" | "pck" | "tls" | "tsc" | "tf" => match PCKSource::from_path(infile) {
+                Ok(pck) => {
+                    let var_count = pck.variables().len();
+                    total_pck_vars += var_count;
+                    let kind = match ext.as_str() {
+                        "tls" => "LSK",
+                        "tsc" => "SCLK",
+                        "tf" => "FK",
+                        _ => "PCK",
+                    };
+                    println!("  {} ({}): {} variables", infile.display(), kind, var_count);
+                    pck_sources.push(pck);
                 }
-            }
+                Err(why) => {
+                    eprintln!("Error: couldn't parse {}: {}", infile.display(), why);
+                    std::process::exit(1);
+                }
+            },
             // Binary DAF files (SPK, CK, BPCK)
             _ => {
                 let file = match File::open(infile) {
@@ -205,7 +198,11 @@ fn main() {
             match hdf5::File::create(&output_path) {
                 Ok(f) => f,
                 Err(why) => {
-                    eprintln!("Error: couldn't create HDF5 file {}: {}", output_path.display(), why);
+                    eprintln!(
+                        "Error: couldn't create HDF5 file {}: {}",
+                        output_path.display(),
+                        why
+                    );
                     std::process::exit(1);
                 }
             }
@@ -213,7 +210,11 @@ fn main() {
             match hdf5::File::open_rw(&output_path) {
                 Ok(f) => f,
                 Err(why) => {
-                    eprintln!("Error: couldn't open HDF5 file {}: {}", output_path.display(), why);
+                    eprintln!(
+                        "Error: couldn't open HDF5 file {}: {}",
+                        output_path.display(),
+                        why
+                    );
                     std::process::exit(1);
                 }
             }
@@ -295,8 +296,12 @@ fn show_kernel_info(input_paths: &[&PathBuf]) {
             if let Some(intervals) = kernel.spk_coverage(body) {
                 let total: f64 = intervals.iter().map(|i| i.end - i.start).sum();
                 let days = total / 86400.0;
-                println!("  {}: {:.1} days coverage ({} interval(s))",
-                         name, days, intervals.len());
+                println!(
+                    "  {}: {:.1} days coverage ({} interval(s))",
+                    name,
+                    days,
+                    intervals.len()
+                );
             }
         }
         println!();
@@ -310,8 +315,12 @@ fn show_kernel_info(input_paths: &[&PathBuf]) {
         for inst in ck_instruments {
             if let Some(intervals) = kernel.ck_coverage(inst) {
                 let total: f64 = intervals.iter().map(|i| i.end - i.start).sum();
-                println!("  {}: {} SCLK ticks coverage ({} interval(s))",
-                         inst.0, total as i64, intervals.len());
+                println!(
+                    "  {}: {} SCLK ticks coverage ({} interval(s))",
+                    inst.0,
+                    total as i64,
+                    intervals.len()
+                );
             }
         }
         println!();
@@ -326,8 +335,12 @@ fn show_kernel_info(input_paths: &[&PathBuf]) {
             if let Some(intervals) = kernel.bpck_coverage(frame) {
                 let total: f64 = intervals.iter().map(|i| i.end - i.start).sum();
                 let days = total / 86400.0;
-                println!("  {}: {:.1} days coverage ({} interval(s))",
-                         frame.0, days, intervals.len());
+                println!(
+                    "  {}: {:.1} days coverage ({} interval(s))",
+                    frame.0,
+                    days,
+                    intervals.len()
+                );
             }
         }
         println!();
@@ -350,8 +363,10 @@ fn show_kernel_info(input_paths: &[&PathBuf]) {
     }
 
     // Total summary
-    println!("Total: {} DAF file(s), {} PCK file(s), {} segment(s)",
-             kernel.daf_sources().len(),
-             kernel.pck_sources().len(),
-             kernel.segment_count());
+    println!(
+        "Total: {} DAF file(s), {} PCK file(s), {} segment(s)",
+        kernel.daf_sources().len(),
+        kernel.pck_sources().len(),
+        kernel.segment_count()
+    );
 }

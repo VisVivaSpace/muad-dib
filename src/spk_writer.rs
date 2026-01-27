@@ -7,7 +7,8 @@ use std::io::{BufWriter, Write};
 
 /// FTP validation string used in DAF files.
 /// This is a fixed string that SPICE uses to detect FTP corruption.
-const FTP_STR: &[u8] = b"FTPSTR:\r:\n:\r\n:\r\x00:\x81:\x10\x00\x00\x00\x00:\x80\x00:\x08\x00:ENDFTP";
+const FTP_STR: &[u8] =
+    b"FTPSTR:\r:\n:\r\n:\r\x00:\x81:\x10\x00\x00\x00\x00:\x80\x00:\x08\x00:ENDFTP";
 
 /// Write a DAF source back to an SPK file.
 pub fn write_spk(path: &std::path::Path, source: &DAFSource) -> Result<()> {
@@ -25,7 +26,9 @@ pub fn write_spk(path: &std::path::Path, source: &DAFSource) -> Result<()> {
         .collect();
 
     if segments.is_empty() {
-        return Err(Error::EmptyData { context: "No SPK segments to write".into() });
+        return Err(Error::EmptyData {
+            context: "No SPK segments to write".into(),
+        });
     }
 
     // Calculate file structure
@@ -89,14 +92,10 @@ pub fn write_spk(path: &std::path::Path, source: &DAFSource) -> Result<()> {
     let total_bytes_written = 3 * 1024 + segments.iter().map(|s| s.data.len() * 8).sum::<usize>();
     let padding_needed = (1024 - (total_bytes_written % 1024)) % 1024;
     if padding_needed > 0 {
-        writer
-            .write_all(&vec![0u8; padding_needed])
-            ?;
+        writer.write_all(&vec![0u8; padding_needed])?;
     }
 
-    writer
-        .flush()
-        ?;
+    writer.flush()?;
 
     Ok(())
 }
@@ -144,9 +143,7 @@ fn write_file_record(
     let ftp_len = FTP_STR.len().min(28);
     record[699..699 + ftp_len].copy_from_slice(&FTP_STR[..ftp_len]);
 
-    writer
-        .write_all(&record)
-        ?;
+    writer.write_all(&record)?;
 
     Ok(())
 }
@@ -202,17 +199,12 @@ fn write_summary_record(
         offset += 4;
     }
 
-    writer
-        .write_all(&record)
-        ?;
+    writer.write_all(&record)?;
 
     Ok(())
 }
 
-fn write_name_record(
-    writer: &mut BufWriter<File>,
-    segments: &[&crate::SPKSegment],
-) -> Result<()> {
+fn write_name_record(writer: &mut BufWriter<File>, segments: &[&crate::SPKSegment]) -> Result<()> {
     let mut record = [0u8; 1024];
 
     // Each segment name is stored as a fixed-width field
@@ -229,26 +221,18 @@ fn write_name_record(
         record[offset..offset + copy_len].copy_from_slice(&name_bytes[..copy_len]);
     }
 
-    writer
-        .write_all(&record)
-        ?;
+    writer.write_all(&record)?;
 
     Ok(())
 }
 
-fn write_segment_data(
-    writer: &mut BufWriter<File>,
-    data: &[f64],
-    endian: Endian,
-) -> Result<()> {
+fn write_segment_data(writer: &mut BufWriter<File>, data: &[f64], endian: Endian) -> Result<()> {
     for &val in data {
         let bytes = match endian {
             Endian::Little => val.to_le_bytes(),
             Endian::Big => val.to_be_bytes(),
         };
-        writer
-            .write_all(&bytes)
-            ?;
+        writer.write_all(&bytes)?;
     }
     Ok(())
 }

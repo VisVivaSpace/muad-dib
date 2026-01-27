@@ -20,18 +20,24 @@ pub struct DAFSource {
 
 /// Write multiple DAF sources to a single HDF5 file.
 pub fn write_hdf5(path: &std::path::Path, sources: Vec<DAFSource>) -> Result<()> {
-    let file =
-        H5File::create(path).map_err(|e| Error::Hdf5 { operation: "create".into(), message: e.to_string() })?;
+    let file = H5File::create(path).map_err(|e| Error::Hdf5 {
+        operation: "create".into(),
+        message: e.to_string(),
+    })?;
 
-    let sources_group = file
-        .create_group("sources")
-        .map_err(|e| Error::Hdf5 { operation: "group".into(), message: e.to_string() })?;
+    let sources_group = file.create_group("sources").map_err(|e| Error::Hdf5 {
+        operation: "group".into(),
+        message: e.to_string(),
+    })?;
 
     for (src_idx, source) in sources.iter().enumerate() {
         let src_name = format!("source_{:03}", src_idx);
         let src_group = sources_group
             .create_group(&src_name)
-            .map_err(|e| Error::Hdf5 { operation: "group".into(), message: e.to_string() })?;
+            .map_err(|e| Error::Hdf5 {
+                operation: "group".into(),
+                message: e.to_string(),
+            })?;
 
         // Add header attributes
         write_string_attr(&src_group, "name", &source.header.name)?;
@@ -51,13 +57,19 @@ pub fn write_hdf5(path: &std::path::Path, sources: Vec<DAFSource>) -> Result<()>
         // Create segments group
         let segs_group = src_group
             .create_group("segments")
-            .map_err(|e| Error::Hdf5 { operation: "group".into(), message: e.to_string() })?;
+            .map_err(|e| Error::Hdf5 {
+                operation: "group".into(),
+                message: e.to_string(),
+            })?;
 
         for (seg_idx, segment) in source.segments.iter().enumerate() {
             let seg_name = format!("segment_{:03}", seg_idx);
             let seg_group = segs_group
                 .create_group(&seg_name)
-                .map_err(|e| Error::Hdf5 { operation: "group".into(), message: e.to_string() })?;
+                .map_err(|e| Error::Hdf5 {
+                    operation: "group".into(),
+                    message: e.to_string(),
+                })?;
 
             match segment {
                 DAFSegment::SPK(spk) => write_spk_segment(&seg_group, spk)?,
@@ -90,10 +102,14 @@ fn write_spk_segment(group: &hdf5::Group, spk: &SPKSegment) -> Result<()> {
         .new_dataset::<f64>()
         .shape([spk.data.len()])
         .create("data")
-        .map_err(|e| Error::Hdf5 { operation: "dataset".into(), message: e.to_string() })?;
-    dataset
-        .write(&data_arr)
-        .map_err(|e| Error::Hdf5 { operation: "write".into(), message: e.to_string() })?;
+        .map_err(|e| Error::Hdf5 {
+            operation: "dataset".into(),
+            message: e.to_string(),
+        })?;
+    dataset.write(&data_arr).map_err(|e| Error::Hdf5 {
+        operation: "write".into(),
+        message: e.to_string(),
+    })?;
 
     Ok(())
 }
@@ -114,19 +130,28 @@ fn write_ck_segment(group: &hdf5::Group, ck: &CKSegment) -> Result<()> {
         .new_attr::<bool>()
         .shape(())
         .create("rates")
-        .map_err(|e| Error::Hdf5 { operation: "attr".into(), message: e.to_string() })?;
-    attr.write_scalar(&ck.rates)
-        .map_err(|e| Error::Hdf5 { operation: "write".into(), message: e.to_string() })?;
+        .map_err(|e| Error::Hdf5 {
+            operation: "attr".into(),
+            message: e.to_string(),
+        })?;
+    attr.write_scalar(&ck.rates).map_err(|e| Error::Hdf5 {
+        operation: "write".into(),
+        message: e.to_string(),
+    })?;
 
     let data_arr = Array1::from_vec(ck.data.clone());
     let dataset = group
         .new_dataset::<f64>()
         .shape([ck.data.len()])
         .create("data")
-        .map_err(|e| Error::Hdf5 { operation: "dataset".into(), message: e.to_string() })?;
-    dataset
-        .write(&data_arr)
-        .map_err(|e| Error::Hdf5 { operation: "write".into(), message: e.to_string() })?;
+        .map_err(|e| Error::Hdf5 {
+            operation: "dataset".into(),
+            message: e.to_string(),
+        })?;
+    dataset.write(&data_arr).map_err(|e| Error::Hdf5 {
+        operation: "write".into(),
+        message: e.to_string(),
+    })?;
 
     Ok(())
 }
@@ -148,10 +173,14 @@ fn write_bpck_segment(group: &hdf5::Group, bpck: &BPCKSegment) -> Result<()> {
         .new_dataset::<f64>()
         .shape([bpck.data.len()])
         .create("data")
-        .map_err(|e| Error::Hdf5 { operation: "dataset".into(), message: e.to_string() })?;
-    dataset
-        .write(&data_arr)
-        .map_err(|e| Error::Hdf5 { operation: "write".into(), message: e.to_string() })?;
+        .map_err(|e| Error::Hdf5 {
+            operation: "dataset".into(),
+            message: e.to_string(),
+        })?;
+    dataset.write(&data_arr).map_err(|e| Error::Hdf5 {
+        operation: "write".into(),
+        message: e.to_string(),
+    })?;
 
     Ok(())
 }
@@ -165,15 +194,17 @@ pub fn write_pck_sources(file: &H5File, sources: &[PCKSource]) -> Result<()> {
         return Ok(());
     }
 
-    let pck_group = file
-        .create_group("pck")
-        .map_err(|e| Error::Hdf5 { operation: "group".into(), message: e.to_string() })?;
+    let pck_group = file.create_group("pck").map_err(|e| Error::Hdf5 {
+        operation: "group".into(),
+        message: e.to_string(),
+    })?;
 
     for (src_idx, source) in sources.iter().enumerate() {
         let src_name = format!("source_{:03}", src_idx);
-        let src_group = pck_group
-            .create_group(&src_name)
-            .map_err(|e| Error::Hdf5 { operation: "group".into(), message: e.to_string() })?;
+        let src_group = pck_group.create_group(&src_name).map_err(|e| Error::Hdf5 {
+            operation: "group".into(),
+            message: e.to_string(),
+        })?;
 
         // Store filename
         write_string_attr(&src_group, "filename", &source.filename)?;
@@ -183,7 +214,10 @@ pub fn write_pck_sources(file: &H5File, sources: &[PCKSource]) -> Result<()> {
         for (i, block) in source.blocks.iter().enumerate() {
             let block_group = src_group
                 .create_group(&format!("block_{:03}", i))
-                .map_err(|e| Error::Hdf5 { operation: "group".into(), message: e.to_string() })?;
+                .map_err(|e| Error::Hdf5 {
+                    operation: "group".into(),
+                    message: e.to_string(),
+                })?;
 
             match block {
                 PCKBlock::Text(text) => {
@@ -213,35 +247,64 @@ fn write_pck_variables(group: &hdf5::Group, vars: &[PCKVariable]) -> Result<()> 
     for (i, var) in vars.iter().enumerate() {
         let var_group = group
             .create_group(&format!("var_{:03}", i))
-            .map_err(|e| Error::Hdf5 { operation: "group".into(), message: e.to_string() })?;
+            .map_err(|e| Error::Hdf5 {
+                operation: "group".into(),
+                message: e.to_string(),
+            })?;
 
         write_string_attr(&var_group, "name", &var.name)?;
         write_i32_attr(&var_group, "value_count", var.values.len() as i32)?;
 
         // Check if all values are numeric (optimization for common case)
-        let all_numeric = var.values.iter().all(|v| matches!(v, KernelValue::Numeric(_)));
-        write_string_attr(&var_group, "value_format", if all_numeric { "numeric_array" } else { "mixed" })?;
+        let all_numeric = var
+            .values
+            .iter()
+            .all(|v| matches!(v, KernelValue::Numeric(_)));
+        write_string_attr(
+            &var_group,
+            "value_format",
+            if all_numeric {
+                "numeric_array"
+            } else {
+                "mixed"
+            },
+        )?;
 
         if all_numeric {
             // Optimized storage for all-numeric variables (common case)
-            let floats: Vec<f64> = var.values.iter()
-                .filter_map(|v| if let KernelValue::Numeric(f) = v { Some(*f) } else { None })
+            let floats: Vec<f64> = var
+                .values
+                .iter()
+                .filter_map(|v| {
+                    if let KernelValue::Numeric(f) = v {
+                        Some(*f)
+                    } else {
+                        None
+                    }
+                })
                 .collect();
             let data_arr = Array1::from_vec(floats);
             let dataset = var_group
                 .new_dataset::<f64>()
                 .shape([var.values.len()])
                 .create("values")
-                .map_err(|e| Error::Hdf5 { operation: "dataset".into(), message: e.to_string() })?;
-            dataset
-                .write(&data_arr)
-                .map_err(|e| Error::Hdf5 { operation: "write".into(), message: e.to_string() })?;
+                .map_err(|e| Error::Hdf5 {
+                    operation: "dataset".into(),
+                    message: e.to_string(),
+                })?;
+            dataset.write(&data_arr).map_err(|e| Error::Hdf5 {
+                operation: "write".into(),
+                message: e.to_string(),
+            })?;
         } else {
             // Mixed values - store each with type
             for (j, value) in var.values.iter().enumerate() {
                 let val_group = var_group
                     .create_group(&format!("val_{:03}", j))
-                    .map_err(|e| Error::Hdf5 { operation: "group".into(), message: e.to_string() })?;
+                    .map_err(|e| Error::Hdf5 {
+                        operation: "group".into(),
+                        message: e.to_string(),
+                    })?;
 
                 match value {
                     KernelValue::Numeric(f) => {
@@ -269,11 +332,18 @@ fn write_string_attr(group: &hdf5::Group, name: &str, value: &str) -> Result<()>
         .new_attr::<VarLenUnicode>()
         .shape(())
         .create(name)
-        .map_err(|e| Error::Hdf5 { operation: "attr".into(), message: e.to_string() })?;
-    let unicode_val = VarLenUnicode::from_str(value)
-        .map_err(|e| Error::Hdf5 { operation: "string".into(), message: e.to_string() })?;
-    attr.write_scalar(&unicode_val)
-        .map_err(|e| Error::Hdf5 { operation: "write".into(), message: e.to_string() })?;
+        .map_err(|e| Error::Hdf5 {
+            operation: "attr".into(),
+            message: e.to_string(),
+        })?;
+    let unicode_val = VarLenUnicode::from_str(value).map_err(|e| Error::Hdf5 {
+        operation: "string".into(),
+        message: e.to_string(),
+    })?;
+    attr.write_scalar(&unicode_val).map_err(|e| Error::Hdf5 {
+        operation: "write".into(),
+        message: e.to_string(),
+    })?;
     Ok(())
 }
 
@@ -282,9 +352,14 @@ fn write_i32_attr(group: &hdf5::Group, name: &str, value: i32) -> Result<()> {
         .new_attr::<i32>()
         .shape(())
         .create(name)
-        .map_err(|e| Error::Hdf5 { operation: "attr".into(), message: e.to_string() })?;
-    attr.write_scalar(&value)
-        .map_err(|e| Error::Hdf5 { operation: "write".into(), message: e.to_string() })?;
+        .map_err(|e| Error::Hdf5 {
+            operation: "attr".into(),
+            message: e.to_string(),
+        })?;
+    attr.write_scalar(&value).map_err(|e| Error::Hdf5 {
+        operation: "write".into(),
+        message: e.to_string(),
+    })?;
     Ok(())
 }
 
@@ -293,9 +368,14 @@ fn write_u64_attr(group: &hdf5::Group, name: &str, value: u64) -> Result<()> {
         .new_attr::<u64>()
         .shape(())
         .create(name)
-        .map_err(|e| Error::Hdf5 { operation: "attr".into(), message: e.to_string() })?;
-    attr.write_scalar(&value)
-        .map_err(|e| Error::Hdf5 { operation: "write".into(), message: e.to_string() })?;
+        .map_err(|e| Error::Hdf5 {
+            operation: "attr".into(),
+            message: e.to_string(),
+        })?;
+    attr.write_scalar(&value).map_err(|e| Error::Hdf5 {
+        operation: "write".into(),
+        message: e.to_string(),
+    })?;
     Ok(())
 }
 
@@ -304,8 +384,13 @@ fn write_f64_attr(group: &hdf5::Group, name: &str, value: f64) -> Result<()> {
         .new_attr::<f64>()
         .shape(())
         .create(name)
-        .map_err(|e| Error::Hdf5 { operation: "attr".into(), message: e.to_string() })?;
-    attr.write_scalar(&value)
-        .map_err(|e| Error::Hdf5 { operation: "write".into(), message: e.to_string() })?;
+        .map_err(|e| Error::Hdf5 {
+            operation: "attr".into(),
+            message: e.to_string(),
+        })?;
+    attr.write_scalar(&value).map_err(|e| Error::Hdf5 {
+        operation: "write".into(),
+        message: e.to_string(),
+    })?;
     Ok(())
 }

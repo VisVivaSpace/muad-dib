@@ -34,11 +34,15 @@ impl OutputFormat for BsonFormat {
             sources: sources.to_vec(),
         };
 
-        let doc = bson::to_document(&wrapper)
-            .map_err(|e| Error::Serialization { format: "BSON".into(), message: e.to_string() })?;
+        let doc = bson::to_document(&wrapper).map_err(|e| Error::Serialization {
+            format: "BSON".into(),
+            message: e.to_string(),
+        })?;
 
-        let bytes = bson::to_vec(&doc)
-            .map_err(|e| Error::Serialization { format: "BSON".into(), message: e.to_string() })?;
+        let bytes = bson::to_vec(&doc).map_err(|e| Error::Serialization {
+            format: "BSON".into(),
+            message: e.to_string(),
+        })?;
 
         writer.write_all(&bytes)?;
 
@@ -51,11 +55,16 @@ pub fn read_bson(path: &Path) -> Result<Vec<DAFSource>> {
     let file = File::open(path)?;
     let reader = BufReader::new(file);
 
-    let doc: bson::Document = bson::Document::from_reader(reader)
-        .map_err(|e| Error::Serialization { format: "BSON".into(), message: e.to_string() })?;
+    let doc: bson::Document =
+        bson::Document::from_reader(reader).map_err(|e| Error::Serialization {
+            format: "BSON".into(),
+            message: e.to_string(),
+        })?;
 
-    let wrapper: BsonWrapper = bson::from_document(doc)
-        .map_err(|e| Error::Serialization { format: "BSON".into(), message: e.to_string() })?;
+    let wrapper: BsonWrapper = bson::from_document(doc).map_err(|e| Error::Serialization {
+        format: "BSON".into(),
+        message: e.to_string(),
+    })?;
 
     Ok(wrapper.sources)
 }

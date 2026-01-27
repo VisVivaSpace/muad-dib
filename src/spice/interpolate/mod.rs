@@ -586,14 +586,18 @@ mod tests {
     fn test_state_large_magnitudes() {
         // AU-scale distances (~1.5e8 km for Earth-Sun distance)
         let ssb_to_earth = State::new(
-            EARTH, SSB, J2000,
-            [1.5e8, 0.0, 0.0],      // 1 AU in km (approximately)
-            [0.0, 29.78, 0.0],      // Earth orbital velocity km/s
+            EARTH,
+            SSB,
+            J2000,
+            [1.5e8, 0.0, 0.0], // 1 AU in km (approximately)
+            [0.0, 29.78, 0.0], // Earth orbital velocity km/s
         );
         let ssb_to_mars = State::new(
-            MARS, SSB, J2000,
-            [2.28e8, 0.0, 0.0],     // Mars distance in km
-            [0.0, 24.07, 0.0],      // Mars orbital velocity km/s
+            MARS,
+            SSB,
+            J2000,
+            [2.28e8, 0.0, 0.0], // Mars distance in km
+            [0.0, 24.07, 0.0],  // Mars orbital velocity km/s
         );
 
         // Relative state Earth to Mars

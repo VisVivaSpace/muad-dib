@@ -23,8 +23,12 @@ impl OutputFormat for MsgPackFormat {
         let file = File::create(path)?;
         let writer = BufWriter::new(file);
 
-        rmp_serde::encode::write(&mut std::io::BufWriter::new(writer), sources)
-            .map_err(|e| Error::Serialization { format: "MessagePack".into(), message: e.to_string() })?;
+        rmp_serde::encode::write(&mut std::io::BufWriter::new(writer), sources).map_err(|e| {
+            Error::Serialization {
+                format: "MessagePack".into(),
+                message: e.to_string(),
+            }
+        })?;
 
         Ok(())
     }
@@ -34,8 +38,11 @@ impl OutputFormat for MsgPackFormat {
 pub fn read_msgpack(path: &Path) -> Result<Vec<DAFSource>> {
     let file = File::open(path)?;
 
-    let sources: Vec<DAFSource> = rmp_serde::decode::from_read(file)
-        .map_err(|e| Error::Serialization { format: "MessagePack".into(), message: e.to_string() })?;
+    let sources: Vec<DAFSource> =
+        rmp_serde::decode::from_read(file).map_err(|e| Error::Serialization {
+            format: "MessagePack".into(),
+            message: e.to_string(),
+        })?;
 
     Ok(sources)
 }

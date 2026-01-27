@@ -10,8 +10,7 @@
 mod cspice_common;
 
 use cspice_common::{
-    assert_close, cspice_dtpool, cspice_gdpool, cspice_gipool, tpc_path, CspiceKernels,
-    CSPICE_LOCK,
+    assert_close, cspice_dtpool, cspice_gdpool, cspice_gipool, tpc_path, CspiceKernels, CSPICE_LOCK,
 };
 use muad_dib::kernel::SpiceKernel;
 use muad_dib::spice::KernelPoolExt;
@@ -41,11 +40,7 @@ fn validate_gdpool_body399_radii() {
         .expect("muad-dib failed to get BODY399_RADII");
 
     // Compare
-    assert_eq!(
-        cspice_radii.len(),
-        muad_radii.len(),
-        "Radii count mismatch"
-    );
+    assert_eq!(cspice_radii.len(), muad_radii.len(), "Radii count mismatch");
     for i in 0..cspice_radii.len() {
         assert_close(
             muad_radii[i],
@@ -212,11 +207,7 @@ fn validate_dtpool_against_pool_has() {
     }
 
     // Variables that should NOT exist
-    let should_not_exist = [
-        "NONEXISTENT_VAR",
-        "BODY9999_RADII",
-        "RANDOM_GARBAGE_12345",
-    ];
+    let should_not_exist = ["NONEXISTENT_VAR", "BODY9999_RADII", "RANDOM_GARBAGE_12345"];
 
     for name in should_not_exist.iter() {
         let cspice_exists = cspice_dtpool(name).is_some();
@@ -242,7 +233,9 @@ fn validate_pool_count() {
 
     // BODY399_RADII should have 3 values
     let cspice_info = cspice_dtpool("BODY399_RADII").expect("CSPICE dtpool failed");
-    let muad_count = kernel.pool_count("BODY399_RADII").expect("muad-dib pool_count failed");
+    let muad_count = kernel
+        .pool_count("BODY399_RADII")
+        .expect("muad-dib pool_count failed");
 
     assert_eq!(
         cspice_info.0, muad_count,
@@ -253,7 +246,9 @@ fn validate_pool_count() {
 
     // BODY399_PM should have 3 values
     let cspice_info = cspice_dtpool("BODY399_PM").expect("CSPICE dtpool failed");
-    let muad_count = kernel.pool_count("BODY399_PM").expect("muad-dib pool_count failed");
+    let muad_count = kernel
+        .pool_count("BODY399_PM")
+        .expect("muad-dib pool_count failed");
 
     assert_eq!(cspice_info.0, muad_count, "Count mismatch for BODY399_PM");
 }
@@ -273,7 +268,9 @@ fn validate_get_f64_scalar() {
 
     // Get first value of BODY399_RADII
     let cspice_values = cspice_gdpool("BODY399_RADII").expect("CSPICE failed");
-    let muad_scalar = kernel.get_f64_scalar("BODY399_RADII").expect("muad-dib failed");
+    let muad_scalar = kernel
+        .get_f64_scalar("BODY399_RADII")
+        .expect("muad-dib failed");
 
     assert_close(
         muad_scalar,
@@ -298,12 +295,12 @@ fn validate_multiple_body_radii() {
 
     // Test radii for multiple bodies
     let bodies = [
-        ("BODY10_RADII", "Sun"),           // Sun
-        ("BODY199_RADII", "Mercury"),       // Mercury
-        ("BODY299_RADII", "Venus"),         // Venus
-        ("BODY399_RADII", "Earth"),         // Earth
-        ("BODY301_RADII", "Moon"),          // Moon
-        ("BODY499_RADII", "Mars"),          // Mars
+        ("BODY10_RADII", "Sun"),      // Sun
+        ("BODY199_RADII", "Mercury"), // Mercury
+        ("BODY299_RADII", "Venus"),   // Venus
+        ("BODY399_RADII", "Earth"),   // Earth
+        ("BODY301_RADII", "Moon"),    // Moon
+        ("BODY499_RADII", "Mars"),    // Mars
     ];
 
     for (var_name, body_name) in bodies.iter() {
@@ -349,19 +346,21 @@ fn validate_orientation_constants() {
     let kernel = SpiceKernel::load(&tpc_path()).expect("Failed to load TPC");
 
     // Test orientation constants for Earth
-    let orientation_vars = [
-        "BODY399_POLE_RA",
-        "BODY399_POLE_DEC",
-        "BODY399_PM",
-    ];
+    let orientation_vars = ["BODY399_POLE_RA", "BODY399_POLE_DEC", "BODY399_PM"];
 
     for var_name in orientation_vars.iter() {
-        let cspice_vals = cspice_gdpool(var_name).expect(&format!("CSPICE failed for {}", var_name));
+        let cspice_vals =
+            cspice_gdpool(var_name).expect(&format!("CSPICE failed for {}", var_name));
         let muad_vals = kernel
             .get_f64(var_name)
             .expect(&format!("muad-dib failed for {}", var_name));
 
-        assert_eq!(cspice_vals.len(), muad_vals.len(), "Length mismatch for {}", var_name);
+        assert_eq!(
+            cspice_vals.len(),
+            muad_vals.len(),
+            "Length mismatch for {}",
+            var_name
+        );
         for i in 0..cspice_vals.len() {
             assert_close(
                 muad_vals[i],

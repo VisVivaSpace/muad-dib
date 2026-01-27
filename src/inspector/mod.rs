@@ -155,7 +155,9 @@ impl App {
         let summary = summaries
             .into_iter()
             .next()
-            .ok_or_else(|| Error::EmptyData { context: "No summaries found in file".into() })?;
+            .ok_or_else(|| Error::EmptyData {
+                context: "No summaries found in file".into(),
+            })?;
 
         // For DAF files, also load the full header and segments
         let (header, segments) = load_daf_details(path)?;

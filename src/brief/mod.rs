@@ -158,10 +158,13 @@ pub fn collect_summaries(path: &Path) -> Result<Vec<FileSummary>, Error> {
         "bson" => collect_from_serialized(path, read_bson),
         // Text PCK files don't have time coverage
         "tpc" | "pck" => Err(Error::Format(
-            "Text PCK files don't have time coverage and cannot be summarized by brief".to_string()
+            "Text PCK files don't have time coverage and cannot be summarized by brief".to_string(),
         )),
         _ => Err(Error::UnknownFormat {
-            format: format!("file format '{}'. Supported: bsp, bc, bpc, hdf5, parquet, arrow, msgpack, bson", ext)
+            format: format!(
+                "file format '{}'. Supported: bsp, bc, bpc, hdf5, parquet, arrow, msgpack, bson",
+                ext
+            ),
         }),
     }
 }
@@ -176,7 +179,11 @@ fn collect_from_daf(path: &Path) -> Result<Vec<FileSummary>, Error> {
         "SPK" => FileType::SPK,
         "CK" => FileType::CK,
         "BPCK" => FileType::BPCK,
-        _ => return Err(Error::UnknownFormat { format: format!("DAF type: {}", header.kind) }),
+        _ => {
+            return Err(Error::UnknownFormat {
+                format: format!("DAF type: {}", header.kind),
+            })
+        }
     };
 
     // Collect segments and merge intervals per object

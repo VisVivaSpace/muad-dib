@@ -29,7 +29,9 @@ pub enum Error {
     InvalidHeader(String),
 
     /// Unsupported DAF file type.
-    #[error("Unsupported DAF type: '{daf_type}' (expected 'S' for SPK, 'C' for CK, or 'P' for BPCK)")]
+    #[error(
+        "Unsupported DAF type: '{daf_type}' (expected 'S' for SPK, 'C' for CK, or 'P' for BPCK)"
+    )]
     UnsupportedType { daf_type: char },
 
     /// Invalid endianness indicator in DAF file.
@@ -45,7 +47,6 @@ pub enum Error {
     Format(String),
 
     // ========== SPICE API Errors ==========
-
     /// No coverage for body/instrument at the requested time.
     ///
     /// For SPK, epoch is TDB seconds past J2000.

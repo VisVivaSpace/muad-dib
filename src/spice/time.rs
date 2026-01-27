@@ -281,19 +281,18 @@ fn parse_time_component(s: &str) -> Result<(u32, u32, f64)> {
 ///
 /// Uses a simplified algorithm (no leap seconds, no TDB-TT difference).
 /// For accurate conversion, use `utc_to_tdb()` with leap second data.
-fn calendar_to_tdb(year: i32, month: u32, day: u32, hour: u32, minute: u32, second: f64) -> Result<EpochTDB> {
+fn calendar_to_tdb(
+    year: i32,
+    month: u32,
+    day: u32,
+    hour: u32,
+    minute: u32,
+    second: f64,
+) -> Result<EpochTDB> {
     // Compute Julian Date using the algorithm from "Astronomical Algorithms" by Jean Meeus
-    let y = if month <= 2 {
-        year - 1
-    } else {
-        year
-    } as f64;
+    let y = if month <= 2 { year - 1 } else { year } as f64;
 
-    let m = if month <= 2 {
-        month + 12
-    } else {
-        month
-    } as f64;
+    let m = if month <= 2 { month + 12 } else { month } as f64;
 
     let d = day as f64;
 
@@ -301,11 +300,7 @@ fn calendar_to_tdb(year: i32, month: u32, day: u32, hour: u32, minute: u32, seco
     let a = (y / 100.0).floor();
     let b = 2.0 - a + (a / 4.0).floor();
 
-    let jd = (365.25 * (y + 4716.0)).floor()
-        + (30.6001 * (m + 1.0)).floor()
-        + d
-        + b
-        - 1524.5;
+    let jd = (365.25 * (y + 4716.0)).floor() + (30.6001 * (m + 1.0)).floor() + d + b - 1524.5;
 
     // Add time of day
     let day_fraction = (hour as f64) / 24.0 + (minute as f64) / 1440.0 + second / 86400.0;
@@ -428,20 +423,32 @@ mod tests {
     fn test_parse_j2000_iso() {
         // J2000 epoch: 2000-01-01T12:00:00 TDB
         let epoch = EpochTDB::parse("2000-01-01T12:00:00").unwrap();
-        assert!(epoch.0.abs() < EPSILON, "J2000 should be near 0 TDB: {}", epoch.0);
+        assert!(
+            epoch.0.abs() < EPSILON,
+            "J2000 should be near 0 TDB: {}",
+            epoch.0
+        );
     }
 
     #[test]
     fn test_parse_j2000_calendar() {
         let epoch = EpochTDB::parse("2000 JAN 01 12:00:00").unwrap();
-        assert!(epoch.0.abs() < EPSILON, "J2000 should be near 0 TDB: {}", epoch.0);
+        assert!(
+            epoch.0.abs() < EPSILON,
+            "J2000 should be near 0 TDB: {}",
+            epoch.0
+        );
     }
 
     #[test]
     fn test_parse_julian_date() {
         // J2000 Julian Date
         let epoch = EpochTDB::parse("JD 2451545.0").unwrap();
-        assert!(epoch.0.abs() < EPSILON, "JD 2451545.0 should be near 0 TDB: {}", epoch.0);
+        assert!(
+            epoch.0.abs() < EPSILON,
+            "JD 2451545.0 should be near 0 TDB: {}",
+            epoch.0
+        );
 
         // Without space
         let epoch2 = EpochTDB::parse("JD2451545.0").unwrap();
@@ -469,9 +476,18 @@ mod tests {
 
     #[test]
     fn test_time_format_detection() {
-        assert_eq!(TimeFormat::detect("2000-01-01T12:00:00"), Some(TimeFormat::Iso8601));
-        assert_eq!(TimeFormat::detect("2000 JAN 01 12:00:00"), Some(TimeFormat::Calendar));
-        assert_eq!(TimeFormat::detect("JD 2451545.0"), Some(TimeFormat::JulianDate));
+        assert_eq!(
+            TimeFormat::detect("2000-01-01T12:00:00"),
+            Some(TimeFormat::Iso8601)
+        );
+        assert_eq!(
+            TimeFormat::detect("2000 JAN 01 12:00:00"),
+            Some(TimeFormat::Calendar)
+        );
+        assert_eq!(
+            TimeFormat::detect("JD 2451545.0"),
+            Some(TimeFormat::JulianDate)
+        );
         assert_eq!(TimeFormat::detect("garbage"), None);
     }
 
@@ -480,7 +496,12 @@ mod tests {
         let original = 123456789.0; // Some arbitrary TDB
         let iso = format_iso8601(original);
         let parsed = EpochTDB::parse(&iso).unwrap();
-        assert!((original - parsed.0).abs() < 1.0, "Round-trip failed: {} vs {}", original, parsed.0);
+        assert!(
+            (original - parsed.0).abs() < 1.0,
+            "Round-trip failed: {} vs {}",
+            original,
+            parsed.0
+        );
     }
 
     #[test]
@@ -518,6 +539,11 @@ mod tests {
         // 2001-01-01T12:00:00 should be about 366 days later (2000 is a leap year)
         let epoch = EpochTDB::parse("2001-01-01T12:00:00").unwrap();
         let expected = 366.0 * SECONDS_PER_DAY; // 2000 is a leap year
-        assert!((epoch.0 - expected).abs() < SECONDS_PER_DAY, "One year: {} vs {}", epoch.0, expected);
+        assert!(
+            (epoch.0 - expected).abs() < SECONDS_PER_DAY,
+            "One year: {} vs {}",
+            epoch.0,
+            expected
+        );
     }
 }

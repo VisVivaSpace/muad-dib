@@ -52,7 +52,9 @@ impl SpkSegmentViewInterpolate for SpkSegmentView<'_> {
             SpkData::Type8(d) => lagrange::evaluate_type8(d, epoch.0),
             SpkData::Type9(d) => lagrange::evaluate_type9(d, epoch.0),
             SpkData::Type13(d) => hermite::evaluate_type13(d, epoch.0),
-            SpkData::Raw { spk_type, .. } => Err(Error::UnsupportedSpkType { spk_type: *spk_type }),
+            SpkData::Raw { spk_type, .. } => Err(Error::UnsupportedSpkType {
+                spk_type: *spk_type,
+            }),
         }?;
 
         // Add relativity context from the segment
@@ -135,9 +137,9 @@ impl SpkInterpolateExt for SpiceKernel {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::hdf5_output::DAFSource;
     use crate::kernel::CoverageIndex;
     use crate::{DAFHeader, DAFMetadata, DAFSegment, Endian, SPKSegment};
-    use crate::hdf5_output::DAFSource;
 
     #[allow(dead_code)]
     fn make_test_kernel() -> SpiceKernel {
@@ -194,8 +196,20 @@ mod tests {
     #[test]
     fn test_state_add() {
         // Chain traversal: SSB→Earth + Earth→Moon = SSB→Moon
-        let ssb_to_earth = State::new(NaifId::EARTH, NaifId::SSB, 1, [1.0, 2.0, 3.0], [0.1, 0.2, 0.3]);
-        let earth_to_moon = State::new(NaifId::MOON, NaifId::EARTH, 1, [4.0, 5.0, 6.0], [0.4, 0.5, 0.6]);
+        let ssb_to_earth = State::new(
+            NaifId::EARTH,
+            NaifId::SSB,
+            1,
+            [1.0, 2.0, 3.0],
+            [0.1, 0.2, 0.3],
+        );
+        let earth_to_moon = State::new(
+            NaifId::MOON,
+            NaifId::EARTH,
+            1,
+            [4.0, 5.0, 6.0],
+            [0.4, 0.5, 0.6],
+        );
         let sum = ssb_to_earth + earth_to_moon;
 
         assert!((sum.position[0] - 5.0).abs() < 1e-10);
@@ -207,7 +221,13 @@ mod tests {
     #[test]
     fn test_state_negate() {
         // Negation: -(SSB→Earth) = Earth→SSB
-        let s = State::new(NaifId::EARTH, NaifId::SSB, 1, [1.0, -2.0, 3.0], [-0.1, 0.2, -0.3]);
+        let s = State::new(
+            NaifId::EARTH,
+            NaifId::SSB,
+            1,
+            [1.0, -2.0, 3.0],
+            [-0.1, 0.2, -0.3],
+        );
         let neg = -s;
 
         assert!((neg.position[0] + 1.0).abs() < 1e-10);

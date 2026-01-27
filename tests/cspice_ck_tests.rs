@@ -48,7 +48,9 @@ fn test_ck_file_loads() {
     assert!(!segments.is_empty(), "Should have CK segments");
 
     // Verify at least one is a CK segment
-    let has_ck = segments.iter().any(|s| matches!(s.as_ref().unwrap(), DAFSegment::CK(_)));
+    let has_ck = segments
+        .iter()
+        .any(|s| matches!(s.as_ref().unwrap(), DAFSegment::CK(_)));
     assert!(has_ck, "Should have CK segment type");
 }
 
@@ -187,9 +189,13 @@ fn validate_ck_pointing_multiple_times() {
         if let Some((cspice_quat, _)) = cspice_ckgp(instrument, sclk, tol, frame_name) {
             cspice_found_any = true;
 
-            let muad_pointing = kernel
-                .pointing_of(NaifId(instrument), Sclk(sclk))
-                .expect(&format!("muad-dib pointing_of failed at fraction {}", fraction));
+            let muad_pointing =
+                kernel
+                    .pointing_of(NaifId(instrument), Sclk(sclk))
+                    .expect(&format!(
+                        "muad-dib pointing_of failed at fraction {}",
+                        fraction
+                    ));
 
             assert_quaternion_close(
                 &muad_pointing.quaternion,
@@ -216,10 +222,7 @@ fn validate_ck_segment_view_interpolation() {
     let kernel = SpiceKernel::load(&ck_path()).expect("Failed to load CK");
 
     // Get first CK segment
-    let segment = kernel
-        .ck_segments()
-        .next()
-        .expect("No CK segments found");
+    let segment = kernel.ck_segments().next().expect("No CK segments found");
 
     let midpoint = (segment.initial_sclk + segment.final_sclk) / 2.0;
 
