@@ -306,42 +306,6 @@ fn test_spice_kernel_load_hermite() {
     assert!(coverage.is_some(), "Should have coverage for spacecraft");
 }
 
-/// Test Type 13 (Hermite) interpolation works
-#[test]
-fn test_type13_hermite_interpolation() {
-    use muad_dib::spice::SpkInterpolateExt;
-    use muad_dib::types::EpochTDB;
-
-    let kernel = SpiceKernel::load("test_data/gmat-hermite.bsp").expect("Failed to load kernel");
-
-    // Get the segment info
-    let segment = kernel.spk_segments().next().expect("No segments");
-    assert_eq!(segment.spk_type, 13, "Expected Type 13 segment");
-
-    let target = NaifId(segment.target_code);
-    let center = NaifId(segment.center_code);
-    let midpoint = (segment.initial_epoch + segment.final_epoch) / 2.0;
-
-    // This should successfully interpolate using Hermite
-    let state = kernel
-        .state_of(target, EpochTDB(midpoint), center)
-        .expect("Type 13 interpolation should work");
-
-    // Verify state is reasonable (non-zero, finite)
-    assert!(state.position[0].is_finite());
-    assert!(state.position[1].is_finite());
-    assert!(state.position[2].is_finite());
-    assert!(state.velocity[0].is_finite());
-    assert!(state.velocity[1].is_finite());
-    assert!(state.velocity[2].is_finite());
-
-    // Position magnitude should be reasonable for an Earth-orbiting spacecraft
-    let dist = state.distance();
-    assert!(dist > 0.0, "Distance should be positive");
-    // Typical Earth orbit is 6000-50000 km from center
-    // This is center=Earth, so we expect relatively small values
-}
-
 /// Test loading multiple SPK files into one kernel
 #[test]
 fn test_spice_kernel_load_multiple() {

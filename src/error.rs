@@ -1,6 +1,5 @@
 //! Error types for DAF file parsing.
 
-use crate::types::NaifId;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -48,20 +47,6 @@ pub enum Error {
     Format(String),
 
     // ========== SPICE API Errors ==========
-    /// No coverage for body/instrument at the requested time.
-    ///
-    /// For SPK, epoch is TDB seconds past J2000.
-    /// For CK, epoch is SCLK ticks.
-    #[error("No coverage for body {body} at epoch {epoch}")]
-    NoCoverage { body: NaifId, epoch: f64 },
-
-    /// SPK segment type interpolation not implemented.
-    #[error("SPK type {spk_type} interpolation not implemented")]
-    UnsupportedSpkType { spk_type: i32 },
-
-    /// CK segment type interpolation not implemented.
-    #[error("CK type {ck_type} interpolation not implemented")]
-    UnsupportedCkType { ck_type: i32 },
 
     /// Cannot parse time string.
     #[error("Cannot parse time string: '{input}'")]
@@ -70,10 +55,6 @@ pub enum Error {
     /// Leap second kernel (LSK) data required for TDB/UTC conversion.
     #[error("Leap second kernel (LSK) data required for TDB/UTC conversion")]
     MissingLskData,
-
-    /// Epoch is outside the valid range for interpolation.
-    #[error("Epoch {epoch} is outside segment coverage [{start}, {end}]")]
-    EpochOutOfRange { epoch: f64, start: f64, end: f64 },
 
     /// Kernel pool variable not found.
     #[error("Kernel pool variable '{name}' not found")]

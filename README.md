@@ -30,8 +30,9 @@ muad-dib extracts the valuable spice data within and converts it to formats that
 - Multiple output formats: HDF5, Parquet, Arrow IPC, MessagePack, BSON
 - Round-trip support: convert back to SPK/CK/PCK with `respice`
 - Preserves all segment metadata for exact reconstruction
-- SPICE-compatible API for direct queries and interpolation
+- Kernel pool access, time parsing, and leap second conversions
 - Text kernel support: LSK (leap seconds), SCLK, FK (frames)
+- Interpolation/computation available in the [`understated`](https://github.com/nstrange/understated) crate
 
 ## Supported Formats
 
@@ -101,40 +102,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-### SPICE-Compatible Queries
+### Kernel Loading
 
 ```rust
 use muad_dib::kernel::SpiceKernel;
-use muad_dib::spice::{SpkInterpolateExt, State};
-use muad_dib::types::{EpochTDB, NaifId};
+use muad_dib::types::NaifId;
 
 let kernel = SpiceKernel::load("de440.bsp")?;
 
-// Query ephemeris at a specific epoch
-let epoch = EpochTDB::parse("2020-01-01T00:00:00")?;
-let state: State = kernel.state_of(NaifId::EARTH, epoch, NaifId::SSB)?;
+// List available bodies
+let bodies = kernel.spk_bodies();
+println!("Bodies: {:?}", bodies);
 
-// State includes full relativity context
-println!("Target: {} (Earth)", state.target);
-println!("Center: {} (SSB)", state.center);
-println!("Frame: {} (J2000)", state.frame);
-println!("Position: {:?} km", state.position);
-println!("Velocity: {:?} km/s", state.velocity);
+// Iterate segments
+for segment in kernel.spk_segments() {
+    println!("Target: {}, Type: {}", segment.target_code, segment.spk_type);
+}
 ```
 
-### CK Pointing Queries
-
-```rust
-use muad_dib::kernel::SpiceKernel;
-use muad_dib::spice::CkInterpolateExt;
-use muad_dib::types::{NaifId, Sclk};
-
-let kernel = SpiceKernel::load("pointing.bc")?;
-
-// Query pointing at a specific SCLK time
-let pointing = kernel.pointing_of(NaifId(-12345), Sclk(123456789.0))?;
-println!("Quaternion: {:?}", pointing.quaternion);
-```
+> **Note:** Interpolation and state computation have moved to the [`understated`](https://github.com/nstrange/understated) crate.
 
 See `examples/` for complete working programs demonstrating each API.
 
@@ -143,14 +129,8 @@ See `examples/` for complete working programs demonstrating each API.
 The `examples/` directory contains runnable demonstrations:
 
 ```bash
-# Query ephemeris data from SPK files
-cargo run --example query_ephemeris -- de440.bsp
-
 # Time string parsing and conversion
 cargo run --example time_conversion
-
-# Coordinate system transformations
-cargo run --example coordinate_transforms
 
 # Access kernel pool variables from text PCK
 cargo run --example kernel_pool -- pck00010.tpc

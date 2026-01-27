@@ -1,39 +1,24 @@
 //! # muad-dib
 //!
-//! Parser for NAIF SPICE Double Precision Array Files (DAF).
+//! Parser and I/O library for NAIF SPICE Double Precision Array Files (DAF).
 //!
-//! This library reads DAF binary files (SPK, CK, BPCK) and provides access to
-//! ephemeris and orientation data stored within them.
+//! This library reads DAF binary files (SPK, CK, BPCK), loads text kernels
+//! (LSK, PCK, FK, SCLK), and converts between SPICE and modern data formats
+//! (HDF5, Parquet, Arrow, MessagePack, BSON).
 //!
-//! ## High-Level API
+//! Interpolation and computation have moved to the `understated` crate.
 //!
-//! For most use cases, use [`kernel::SpiceKernel`] which provides state evaluation
-//! with automatic chain traversal:
+//! ## Kernel Loading
+//!
+//! Use [`kernel::SpiceKernel`] to load one or more kernel files:
 //!
 //! ```ignore
 //! use muad_dib::kernel::SpiceKernel;
-//! use muad_dib::spice::SpkInterpolateExt;
-//! use muad_dib::types::{EpochTDB, NaifId};
+//! use muad_dib::types::NaifId;
 //!
 //! let kernel = SpiceKernel::load("de440.bsp")?;
-//! let epoch = EpochTDB::parse("2020-01-01T00:00:00")?;
-//! let state = kernel.state_of(NaifId::EARTH, epoch, NaifId::SSB)?;
-//! println!("Position: {:?} km", state.position);
-//! ```
-//!
-//! ## State Arithmetic
-//!
-//! The [`spice::interpolate::State`] type supports arithmetic operators for
-//! computing relative states in chain traversals:
-//!
-//! ```ignore
-//! // Get individual states
-//! let earth_moon = kernel.state_of(NaifId::MOON, epoch, NaifId::EARTH)?;
-//! let ssb_earth = kernel.state_of(NaifId::EARTH, epoch, NaifId::SSB)?;
-//!
-//! // Combine with arithmetic
-//! let ssb_moon = ssb_earth + earth_moon;  // Moon from SSB
-//! let moon_earth = -earth_moon;           // Reverse direction
+//! let bodies = kernel.spk_bodies();
+//! let segments = kernel.spk_segments();
 //! ```
 //!
 //! ## Type-Safe Newtypes

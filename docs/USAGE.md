@@ -65,14 +65,15 @@ respice mission.parquet -o restored/
 
 ```rust
 use muad_dib::kernel::SpiceKernel;
-use muad_dib::spice::{EpochTDB, SpkInterpolateExt};
 use muad_dib::types::NaifId;
 
-// Load kernel and query state
+// Load kernel and inspect segments
 let kernel = SpiceKernel::load("de440.bsp")?;
-let epoch = EpochTDB::parse("2020-06-15T12:00:00")?;
-let state = kernel.state_of(NaifId::EARTH, epoch, NaifId::SSB)?;
+let bodies = kernel.spk_bodies();
+let segments = kernel.spk_segments();
 ```
+
+> **Note:** Interpolation and computation have moved to the `understated` crate.
 
 ### Example Programs
 
@@ -80,9 +81,7 @@ The `examples/` directory contains complete working programs:
 
 | Example | Run Command | Description |
 |---------|-------------|-------------|
-| `query_ephemeris` | `cargo run --example query_ephemeris -- <file.bsp>` | Query spacecraft/planetary positions |
 | `time_conversion` | `cargo run --example time_conversion` | Parse and format time strings |
-| `coordinate_transforms` | `cargo run --example coordinate_transforms` | Convert between coordinate systems |
 | `kernel_pool` | `cargo run --example kernel_pool -- <file.tpc>` | Read text kernel variables |
 
 ### Key Types
@@ -92,16 +91,11 @@ The `examples/` directory contains complete working programs:
 | `SpiceKernel` | `kernel` | Loaded kernel with segments |
 | `EpochTDB` | `spice` / `types` | TDB epoch (seconds past J2000) |
 | `NaifId` | `types` | NAIF body/frame identifier |
-| `State` | `spice` | Position, velocity, + relativity context (target, center, frame) |
-| `Pointing` | `spice` | Quaternion, angular velocity, + reference frame |
 
 ### Traits
 
-Import these traits to enable interpolation methods:
-
-- `SpkInterpolateExt` - Adds `state_of()` to `SpiceKernel`
-- `CkInterpolateExt` - Adds `pointing_of()` to `SpiceKernel`
-- `KernelPoolExt` - Adds `get_f64()`, `pool_has()`, etc.
+- `KernelPoolExt` - Adds `get_f64()`, `pool_has()`, etc. for kernel pool access
+- `LeapSecondExt` - Adds `lsk_data()` for leap second data extraction
 
 ## Format Comparison
 
