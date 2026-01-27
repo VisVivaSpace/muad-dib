@@ -2,33 +2,91 @@
 
 This directory contains validation tests for muad-dib DAF parsing and interpolation.
 
-## Test Categories
+## Test Modes
 
-### Standard Tests (no external dependencies)
+### 1. Default Mode (no features)
 
-Run with `cargo test`:
+Safe for crates.io - runs tests that don't require external data files.
 
-- **anise_validation_tests.rs** - Pure-Rust structural validation using anise
-  - File record validation (ND, NI, endian, FWARD)
-  - Segment count and metadata matching
-  - Data array size validation
-
-### CSPICE Validation Tests (feature-gated)
-
-Require CSPICE library installed. Run with:
 ```bash
-export CSPICE_LIB=/path/to/cspice/lib
-cargo test --features cspice -- --test-threads=1
+cargo test
 ```
 
-Test files:
-- **cspice_spk_tests.rs** - SPK ephemeris interpolation
-- **cspice_ck_tests.rs** - CK pointing interpolation
-- **cspice_coord_tests.rs** - Coordinate transformations
-- **cspice_time_tests.rs** - Time conversions (ET/TDB)
-- **cspice_pool_tests.rs** - Kernel pool operations
-- **cspice_validation_tests.rs** - General validation
+Runs ~177 tests including:
+- Unit tests for all modules
+- Error handling tests
+- Doc tests
+
+### 2. Test Data Mode
+
+Requires `test_data/` directory with SPICE kernel files (use Git LFS).
+
+```bash
+cargo test --features test-data
+```
+
+Runs ~206 tests including everything from default mode plus:
+- **integration_tests.rs** - DAF file parsing validation
+- **anise_validation_tests.rs** - Cross-validation with anise crate
+- **format_tests.rs** - Round-trip format conversion tests
+- **round_trip_tests.rs** - SPK → HDF5 → SPK preservation tests
+
+### 3. CSPICE Validation Mode
+
+Requires CSPICE library AND test data files.
+
+```bash
+export CSPICE_LIB=/path/to/cspice/lib
+cargo test --features cspice,test-data -- --test-threads=1
+```
+
+Adds CSPICE validation tests:
+- **cspice_spk_tests.rs** - SPK ephemeris interpolation vs CSPICE
+- **cspice_ck_tests.rs** - CK pointing interpolation vs CSPICE
+- **cspice_coord_tests.rs** - Coordinate transformations vs CSPICE
+- **cspice_time_tests.rs** - Time conversions (ET/TDB) vs CSPICE
+- **cspice_pool_tests.rs** - Kernel pool operations vs CSPICE
+- **cspice_validation_tests.rs** - General validation vs CSPICE
 - **cspice_common.rs** - Shared test utilities (mutex, FFI wrappers)
+
+**Important:** CSPICE tests MUST use `--test-threads=1` (CSPICE is not thread-safe).
+
+## Quick Reference
+
+| Command | Tests | Requirements |
+|---------|-------|--------------|
+| `cargo test` | ~177 | None |
+| `cargo test --features test-data` | ~206 | test_data/ (Git LFS) |
+| `cargo test --features cspice,test-data -- --test-threads=1` | ~220+ | test_data/ + CSPICE |
+
+## Test Data Files
+
+Located in `test_data/` (tracked via Git LFS):
+
+### SPK Files (Spacecraft/Planetary Ephemeris)
+| File | Description |
+|------|-------------|
+| `test.bsp` | Primary test SPK (Type 9 Lagrange) |
+| `gmat-hermite.bsp` | GMAT-generated Hermite interpolation |
+| `gmat-hermite-big-endian.bsp` | Big-endian Hermite SPK |
+| `gmat-lagrange.bsp` | GMAT-generated Lagrange interpolation |
+| `variable-seg-size-hermite.bsp` | Variable segment size Hermite |
+| `rename-test.bsp` | Segment renaming test file |
+
+### BPC Files (Binary Planetary Constants)
+| File | Description |
+|------|-------------|
+| `earth_latest_high_prec.bpc` | High-precision Earth orientation |
+| `earth_longterm_000101_251211_250915.bpc` | Long-term Earth orientation |
+| `earth_2025_250826_2125_predict.bpc` | Predicted Earth orientation |
+| `moon_pa_de440_200625.bpc` | Moon principal axes (DE440) |
+
+### Other Files
+| File | Description |
+|------|-------------|
+| `test.bc` | CK pointing data |
+| `test.tpc` | Text PCK planetary constants |
+| `test_pck.hdf5` | Pre-converted PCK in HDF5 |
 
 ## CSPICE Setup
 
@@ -60,39 +118,6 @@ export CSPICE_LIB=/path/to/cspice/lib
 
 Add to your shell profile for persistence.
 
-## Test Data Requirements
-
-CSPICE tests require kernel files in the project root:
-
-| File | Type | Purpose |
-|------|------|---------|
-| `test.bsp` | SPK | Ephemeris data for position/velocity tests |
-| `test.bc` | CK | Pointing data for orientation tests |
-| `naif0012.tls` | LSK | Leap seconds for time conversions |
-
-## Running Tests
-
-### Single-threaded requirement
-
-CSPICE is NOT thread-safe. Tests use a global mutex (`CSPICE_LOCK`) but must run single-threaded:
-
-```bash
-# CSPICE tests MUST use --test-threads=1
-cargo test --features cspice -- --test-threads=1
-
-# Run specific test file
-cargo test --features cspice --test cspice_spk_tests -- --test-threads=1
-
-# Run specific test
-cargo test --features cspice validate_spk_position_midpoint -- --test-threads=1
-```
-
-### Verbose output
-
-```bash
-cargo test --features cspice -- --test-threads=1 --nocapture
-```
-
 ## Tolerance Reference
 
 Comparison tolerances used in CSPICE validation tests:
@@ -123,9 +148,7 @@ This means users can use muad-dib without installing CSPICE.
 Tests use `CSPICE_LOCK` from `cspice_common.rs`:
 
 ```rust
-lazy_static! {
-    pub static ref CSPICE_LOCK: Mutex<()> = Mutex::new(());
-}
+pub static CSPICE_LOCK: Mutex<()> = Mutex::new(());
 
 #[test]
 fn my_test() {
