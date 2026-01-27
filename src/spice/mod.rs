@@ -23,7 +23,7 @@ pub mod lsk;
 pub mod pool;
 pub mod time;
 
-pub use lsk::{tdb_to_utc, utc_to_tdb, LeapSecondData, LeapSecondExt};
+pub use lsk::{tdb_to_utc, utc_to_tdb, EpochType, LeapSecondData, LeapSecondExt};
 pub use pool::KernelPoolExt;
 pub use time::{format_calendar, format_iso8601, tdb_to_calendar, TimeFormat};
 

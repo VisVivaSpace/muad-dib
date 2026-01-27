@@ -39,6 +39,15 @@ use crate::spice::time::{format_calendar, format_iso8601, TimeFormat};
 use crate::text_pck::KernelValue;
 use crate::types::EpochTDB;
 
+/// Epoch type for `deltet` computation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EpochType {
+    /// Epoch is UTC seconds past J2000.
+    Utc,
+    /// Epoch is ET (TDB) seconds past J2000.
+    Et,
+}
+
 /// Leap second data extracted from an LSK file.
 ///
 /// Contains all the constants needed for TDB/UTC conversion.
@@ -64,14 +73,14 @@ pub struct LeapSecondData {
 }
 
 impl LeapSecondData {
-    /// Get the TAI-UTC offset (ΔAT) for a given TDB epoch.
+    /// Get the TAI-UTC offset (ΔAT) for a given epoch compared directly
+    /// against the leap second table epochs.
     ///
-    /// Returns the cumulative leap seconds adjustment at the given epoch.
-    pub fn delta_at(&self, tdb: f64) -> f64 {
-        // Find the applicable leap second entry
+    /// This is a raw lookup — for correct ET-aware lookup, use `deltet`.
+    pub fn delta_at(&self, epoch: f64) -> f64 {
         let mut delta = 0.0;
-        for (d, epoch) in &self.leap_seconds {
-            if tdb >= *epoch {
+        for (d, ep) in &self.leap_seconds {
+            if epoch >= *ep {
                 delta = *d;
             } else {
                 break;
@@ -80,67 +89,69 @@ impl LeapSecondData {
         delta
     }
 
-    /// Convert TDB to TT (Terrestrial Time).
+    /// Compute ET - UTC (delta ET) for a given epoch.
+    /// Matches CSPICE's `deltet_` exactly.
     ///
-    /// TDB = TT + periodic_term
-    /// The periodic term is approximately:
-    /// K * sin(E) where E is the eccentric anomaly
-    pub fn tdb_to_tt(&self, tdb: f64) -> f64 {
-        // Simplified: TT ≈ TDB for most practical purposes
-        // Full formula: TDB = TT + 0.001657*sin(E)
-        let m = self.m[0] + self.m[1] * tdb;
-        let e = m + self.eb * m.sin(); // Eccentric anomaly approximation
-        let periodic = self.k * e.sin();
-        tdb - periodic
-    }
+    /// `delta_ET = delta_T_A + leap_seconds + K * sin(E)`
+    ///
+    /// The periodic term is evaluated at the nearest ET second to ensure
+    /// reversibility (UTC→ET→UTC round-trips exactly).
+    pub fn deltet(&self, epoch: f64, epoch_type: EpochType) -> f64 {
+        // 1. Determine leap seconds count
+        let mut leaps = self
+            .leap_seconds
+            .first()
+            .map_or(0.0, |(d, _)| d - 1.0);
 
-    /// Convert TT to TDB.
-    pub fn tt_to_tdb(&self, tt: f64) -> f64 {
-        // Iterative solution (usually converges in 1-2 iterations)
-        let mut tdb = tt;
-        for _ in 0..3 {
-            let m = self.m[0] + self.m[1] * tdb;
-            let e = m + self.eb * m.sin();
-            let periodic = self.k * e.sin();
-            tdb = tt + periodic;
+        match epoch_type {
+            EpochType::Utc => {
+                // UTC case: compare epoch directly against table epochs
+                for &(delta, ep) in &self.leap_seconds {
+                    if epoch >= ep {
+                        leaps = delta;
+                    } else {
+                        break;
+                    }
+                }
+            }
+            EpochType::Et => {
+                // ET case: compute the actual ET at each leap second boundary
+                for &(delta, ep) in &self.leap_seconds {
+                    if epoch > ep {
+                        let aet = (ep + self.delta_t_a + delta).round();
+                        let ma = self.m[0] + self.m[1] * aet;
+                        let ea = ma + self.eb * ma.sin();
+                        let ettai = self.k * ea.sin();
+                        let et_boundary = ep + self.delta_t_a + delta + ettai;
+                        if epoch >= et_boundary {
+                            leaps = delta;
+                        }
+                    }
+                }
+            }
         }
-        tdb
-    }
 
-    /// Convert TDB to TAI.
-    ///
-    /// TAI = TT - 32.184
-    pub fn tdb_to_tai(&self, tdb: f64) -> f64 {
-        let tt = self.tdb_to_tt(tdb);
-        tt - self.delta_t_a
-    }
+        // 2. Compute periodic term at nearest ET second (for reversibility)
+        let aet = match epoch_type {
+            EpochType::Et => epoch.round(),
+            EpochType::Utc => (epoch + self.delta_t_a + leaps).round(),
+        };
+        let ma = self.m[0] + self.m[1] * aet;
+        let ea = ma + self.eb * ma.sin();
+        let ettai = self.k * ea.sin();
 
-    /// Convert TAI to TDB.
-    pub fn tai_to_tdb(&self, tai: f64) -> f64 {
-        let tt = tai + self.delta_t_a;
-        self.tt_to_tdb(tt)
-    }
-
-    /// Convert TDB to UTC (as seconds past J2000).
-    ///
-    /// UTC = TAI - ΔAT (leap seconds)
-    pub fn tdb_to_utc_seconds(&self, tdb: f64) -> f64 {
-        let tai = self.tdb_to_tai(tdb);
-        let delta_at = self.delta_at(tdb);
-        tai - delta_at
+        // delta_ET = delta_T_A + leap_seconds + K*sin(E)
+        self.delta_t_a + leaps + ettai
     }
 
     /// Convert UTC seconds past J2000 to TDB.
     pub fn utc_to_tdb_seconds(&self, utc: f64) -> f64 {
-        // First approximation: use TDB value to look up leap seconds
-        let tdb_approx = utc + self.delta_t_a + 10.0; // Initial guess
-        let delta_at = self.delta_at(tdb_approx);
+        utc + self.deltet(utc, EpochType::Utc)
+    }
 
-        // TAI = UTC + ΔAT
-        let tai = utc + delta_at;
-
-        // TDB from TAI
-        self.tai_to_tdb(tai)
+    /// Convert TDB to UTC (as seconds past J2000).
+    pub fn tdb_to_utc_seconds(&self, tdb: f64) -> f64 {
+        tdb - self.deltet(tdb, EpochType::Et)
     }
 }
 
@@ -389,20 +400,20 @@ mod tests {
     }
 
     #[test]
-    fn test_tdb_tt_conversion() {
+    fn test_deltet_reversibility() {
         let kernel = make_lsk_kernel();
         let lsk = kernel.lsk_data().unwrap();
 
-        // At J2000, TDB and TT should be very close
-        let tdb = 0.0;
-        let tt = lsk.tdb_to_tt(tdb);
-
-        // The difference should be small (< 2 ms)
-        assert!((tdb - tt).abs() < 0.002);
-
-        // Round-trip should work
-        let tdb_back = lsk.tt_to_tdb(tt);
-        assert!((tdb - tdb_back).abs() < 1e-9);
+        // CSPICE guarantees: deltet(utc, UTC) == deltet(utc + delta, ET)
+        for utc in &[0.0, 1e8, -5e8, 5e8] {
+            let delta1 = lsk.deltet(*utc, EpochType::Utc);
+            let delta2 = lsk.deltet(*utc + delta1, EpochType::Et);
+            assert_eq!(
+                delta1, delta2,
+                "deltet reversibility failed for utc={}",
+                utc
+            );
+        }
     }
 
     #[test]
@@ -415,12 +426,12 @@ mod tests {
         let tdb = lsk.utc_to_tdb_seconds(utc_seconds);
         let utc_back = lsk.tdb_to_utc_seconds(tdb);
 
-        // Should be close to original
         assert!(
-            (utc_seconds - utc_back).abs() < 1.0,
-            "Round-trip error: {} vs {}",
+            (utc_seconds - utc_back).abs() < 1e-10,
+            "Round-trip error: {} vs {} (diff={})",
             utc_seconds,
-            utc_back
+            utc_back,
+            (utc_seconds - utc_back).abs()
         );
     }
 
