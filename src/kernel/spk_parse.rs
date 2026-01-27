@@ -421,7 +421,7 @@ mod tests {
     fn test_parse_type2() {
         // Minimal Type 2 data: 1 record with degree 1 (2 coefficients per axis)
         // Record size = 2 (MID, RADIUS) + 3 * 2 = 8
-        let mut data = vec![
+        let data = vec![
             // Record 1
             100.0,    // MID
             50.0,     // RADIUS

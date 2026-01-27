@@ -136,10 +136,10 @@ impl SpkInterpolateExt for SpiceKernel {
 mod tests {
     use super::*;
     use crate::kernel::CoverageIndex;
-    use crate::kernel::spk_types::{ChebyshevRecord, Spk2Data};
     use crate::{DAFHeader, DAFMetadata, DAFSegment, Endian, SPKSegment};
     use crate::hdf5_output::DAFSource;
 
+    #[allow(dead_code)]
     fn make_test_kernel() -> SpiceKernel {
         // Create a simple Type 2 SPK segment
         let segment = SPKSegment {
