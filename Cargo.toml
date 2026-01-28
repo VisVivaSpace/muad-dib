@@ -3,7 +3,12 @@ name = "muad-dib"
 version = "0.3.0"
 edition = "2021"
 license = "MIT"
-exclude = ["test_data/"]
+description = "Parser and tools for NAIF SPICE DAF files (SPK, CK, PCK)"
+repository = "https://github.com/VisVivaSpace/muad-dib"
+readme = "README.md"
+keywords = ["spice", "daf", "ephemeris", "spacecraft", "naif"]
+categories = ["science", "aerospace", "parser-implementations"]
+exclude = ["test_data/", "target/"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
