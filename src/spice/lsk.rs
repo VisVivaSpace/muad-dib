@@ -200,18 +200,22 @@ impl LeapSecondExt for SpiceKernel {
             // Each pair is (numeric TAI-UTC value, epoch string)
             let delta = match &values[i] {
                 KernelValue::Numeric(n) => *n,
-                _ => {
-                    i += 1;
-                    continue;
+                other => {
+                    return Err(Error::Format(format!(
+                        "DELTET/DELTA_AT[{}]: expected numeric delta, got {:?}",
+                        i, other
+                    )));
                 }
             };
 
             let epoch_str = match &values[i + 1] {
                 KernelValue::Epoch(s) => s.clone(),
                 KernelValue::Text(s) => s.clone(),
-                _ => {
-                    i += 2;
-                    continue;
+                other => {
+                    return Err(Error::Format(format!(
+                        "DELTET/DELTA_AT[{}]: expected epoch string, got {:?}",
+                        i + 1, other
+                    )));
                 }
             };
 
@@ -223,7 +227,7 @@ impl LeapSecondExt for SpiceKernel {
         }
 
         // Sort by epoch
-        leap_seconds.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+        leap_seconds.sort_by(|a, b| a.1.total_cmp(&b.1));
 
         Ok(LeapSecondData {
             delta_t_a,

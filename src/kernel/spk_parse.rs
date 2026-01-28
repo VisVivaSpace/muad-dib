@@ -56,6 +56,12 @@ fn parse_type2(data: &[f64]) -> Option<SpkData> {
         return None;
     }
 
+    // Validate that num_records * rsize won't overflow and fits in data
+    let data_end = n - 4; // Exclude directory
+    if num_records > data_end || rsize > data_end || num_records.checked_mul(rsize).is_none() {
+        return None;
+    }
+
     // Calculate polynomial degree
     // RSIZE = 2 (MID, RADIUS) + 3 * (degree + 1)
     // So: degree = (RSIZE - 2) / 3 - 1
@@ -67,7 +73,6 @@ fn parse_type2(data: &[f64]) -> Option<SpkData> {
 
     // Parse records
     let mut records = Vec::with_capacity(num_records);
-    let data_end = n - 4; // Exclude directory
 
     for i in 0..num_records {
         let start = i * rsize;
@@ -129,6 +134,12 @@ fn parse_type3(data: &[f64]) -> Option<SpkData> {
         return None;
     }
 
+    // Validate that num_records * rsize won't overflow and fits in data
+    let data_end = n - 4;
+    if num_records > data_end || rsize > data_end || num_records.checked_mul(rsize).is_none() {
+        return None;
+    }
+
     // RSIZE = 2 (MID, RADIUS) + 6 * (degree + 1)
     // degree = (RSIZE - 2) / 6 - 1
     let coeffs_per_axis = (rsize - 2) / 6;
@@ -138,7 +149,6 @@ fn parse_type3(data: &[f64]) -> Option<SpkData> {
     let degree = (coeffs_per_axis - 1) as u32;
 
     let mut records = Vec::with_capacity(num_records);
-    let data_end = n - 4;
 
     for i in 0..num_records {
         let start = i * rsize;
@@ -206,7 +216,7 @@ fn parse_type5(data: &[f64]) -> Option<SpkData> {
     let num_states = data[n - 1] as usize;
     let gm = data[n - 2];
 
-    if num_states == 0 {
+    if num_states == 0 || num_states > n {
         return None;
     }
 
@@ -261,7 +271,7 @@ fn parse_type8(data: &[f64]) -> Option<SpkData> {
     let step_size = data[n - 3];
     let start_epoch = data[n - 4];
 
-    if num_states == 0 {
+    if num_states == 0 || num_states > n {
         return None;
     }
 
@@ -323,7 +333,7 @@ fn parse_type9(data: &[f64]) -> Option<SpkData> {
     let num_states = data[n - 1] as usize;
     let window_size = data[n - 2] as u32;
 
-    if num_states == 0 {
+    if num_states == 0 || num_states > n {
         return None;
     }
 
@@ -385,7 +395,7 @@ fn parse_type13(data: &[f64]) -> Option<SpkData> {
     let num_states = data[n - 1] as usize;
     let window_size = data[n - 2] as u32;
 
-    if num_states == 0 {
+    if num_states == 0 || num_states > n {
         return None;
     }
 

@@ -127,13 +127,22 @@ fn write_file_record(
     record[16..16 + copy_len].copy_from_slice(&name_bytes[..copy_len]);
 
     // FWARD (4 bytes at offset 76)
-    write_i32_to_buf(&mut record[76..80], fward as i32, metadata.endian);
+    let fward_i32 = i32::try_from(fward).map_err(|_| Error::Format(
+        format!("FWARD value {} exceeds i32 range", fward),
+    ))?;
+    write_i32_to_buf(&mut record[76..80], fward_i32, metadata.endian);
 
     // BWARD (4 bytes at offset 80)
-    write_i32_to_buf(&mut record[80..84], bward as i32, metadata.endian);
+    let bward_i32 = i32::try_from(bward).map_err(|_| Error::Format(
+        format!("BWARD value {} exceeds i32 range", bward),
+    ))?;
+    write_i32_to_buf(&mut record[80..84], bward_i32, metadata.endian);
 
     // FREE (4 bytes at offset 84)
-    write_i32_to_buf(&mut record[84..88], free_address as i32, metadata.endian);
+    let free_i32 = i32::try_from(free_address).map_err(|_| Error::Format(
+        format!("FREE address {} exceeds i32 range", free_address),
+    ))?;
+    write_i32_to_buf(&mut record[84..88], free_i32, metadata.endian);
 
     // LOCFMT (8 bytes at offset 88)
     let locfmt = metadata.endian.locfmt();
@@ -181,6 +190,13 @@ fn write_summary_record(
     for (i, seg) in segments.iter().enumerate() {
         let (data_start, data_end) = addrs[i];
 
+        let start_i32 = i32::try_from(data_start).map_err(|_| Error::Format(
+            format!("data_start address {} exceeds i32 range", data_start),
+        ))?;
+        let end_i32 = i32::try_from(data_end).map_err(|_| Error::Format(
+            format!("data_end address {} exceeds i32 range", data_end),
+        ))?;
+
         write_f64_to_buf(&mut record[offset..offset + 8], seg.initial_epoch, endian);
         offset += 8;
         write_f64_to_buf(&mut record[offset..offset + 8], seg.final_epoch, endian);
@@ -193,9 +209,9 @@ fn write_summary_record(
         offset += 4;
         write_i32_to_buf(&mut record[offset..offset + 4], seg.spk_type, endian);
         offset += 4;
-        write_i32_to_buf(&mut record[offset..offset + 4], data_start as i32, endian);
+        write_i32_to_buf(&mut record[offset..offset + 4], start_i32, endian);
         offset += 4;
-        write_i32_to_buf(&mut record[offset..offset + 4], data_end as i32, endian);
+        write_i32_to_buf(&mut record[offset..offset + 4], end_i32, endian);
         offset += 4;
     }
 

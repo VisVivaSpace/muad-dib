@@ -199,7 +199,11 @@ pub fn write_pck_sources(file: &H5File, sources: &[PCKSource]) -> Result<()> {
 
         // Store filename
         write_string_attr(&src_group, "filename", &source.filename)?;
-        write_i32_attr(&src_group, "block_count", source.blocks.len() as i32)?;
+        let block_count = i32::try_from(source.blocks.len()).map_err(|_| Error::Hdf5 {
+            operation: "attr".into(),
+            message: format!("block count {} exceeds i32 range", source.blocks.len()),
+        })?;
+        write_i32_attr(&src_group, "block_count", block_count)?;
 
         // Store blocks as indexed groups
         for (i, block) in source.blocks.iter().enumerate() {
@@ -233,7 +237,11 @@ pub fn write_pck_sources(file: &H5File, sources: &[PCKSource]) -> Result<()> {
 /// - value_count: number of values
 /// - For each value: type ("numeric", "epoch", "text") + data (f64 or string)
 fn write_pck_variables(group: &hdf5::Group, vars: &[PCKVariable]) -> Result<()> {
-    write_i32_attr(group, "variable_count", vars.len() as i32)?;
+    let var_count = i32::try_from(vars.len()).map_err(|_| Error::Hdf5 {
+        operation: "attr".into(),
+        message: format!("variable count {} exceeds i32 range", vars.len()),
+    })?;
+    write_i32_attr(group, "variable_count", var_count)?;
 
     for (i, var) in vars.iter().enumerate() {
         let var_group = group
@@ -244,7 +252,11 @@ fn write_pck_variables(group: &hdf5::Group, vars: &[PCKVariable]) -> Result<()> 
             })?;
 
         write_string_attr(&var_group, "name", &var.name)?;
-        write_i32_attr(&var_group, "value_count", var.values.len() as i32)?;
+        let val_count = i32::try_from(var.values.len()).map_err(|_| Error::Hdf5 {
+            operation: "attr".into(),
+            message: format!("value count {} exceeds i32 range", var.values.len()),
+        })?;
+        write_i32_attr(&var_group, "value_count", val_count)?;
 
         // Check if all values are numeric (optimization for common case)
         let all_numeric = var

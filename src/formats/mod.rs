@@ -26,6 +26,7 @@ pub mod bson;
 pub mod hdf5;
 pub mod msgpack;
 pub mod parquet;
+pub mod segment_row;
 
 use crate::daf_source::DAFSource;
 #[cfg(feature = "hdf5")]

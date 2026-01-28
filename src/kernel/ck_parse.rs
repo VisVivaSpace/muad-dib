@@ -46,13 +46,13 @@ fn parse_type1(data: &[f64], has_rates: bool) -> Option<CkData> {
     let n = data.len();
     let nprec = data[n - 1] as usize;
 
-    if nprec == 0 {
+    if nprec == 0 || nprec > n {
         return None;
     }
 
     // Calculate sizes
     let record_size = if has_rates { 7 } else { 4 };
-    let pointing_data_size = nprec * record_size;
+    let pointing_data_size = nprec.checked_mul(record_size)?;
     let sclk_data_size = nprec;
     let dir_size = if nprec > 1 { (nprec - 1) / 100 } else { 0 };
 
@@ -116,13 +116,13 @@ fn parse_type3(data: &[f64], has_rates: bool) -> Option<CkData> {
     let nprec = data[n - 1] as usize;
     let numint = data[n - 2] as usize;
 
-    if nprec == 0 || numint == 0 {
+    if nprec == 0 || numint == 0 || nprec > n || numint > n {
         return None;
     }
 
     // Calculate sizes
     let record_size = if has_rates { 7 } else { 4 };
-    let pointing_data_size = nprec * record_size;
+    let pointing_data_size = nprec.checked_mul(record_size)?;
     let sclk_data_size = nprec;
     let sclk_dir_size = if nprec > 1 { (nprec - 1) / 100 } else { 0 };
     let interval_start_size = numint;

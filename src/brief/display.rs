@@ -143,7 +143,7 @@ fn display_tabular(objects: &[ObjectSummary], file_type: FileType, opts: &BriefO
 
     // Sort by start time if requested
     if opts.sort_by_time {
-        rows.sort_by(|a, b| a.sort_key.partial_cmp(&b.sort_key).unwrap());
+        rows.sort_by(|a, b| a.sort_key.total_cmp(&b.sort_key));
     }
 
     // Calculate column widths
