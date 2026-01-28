@@ -214,4 +214,4 @@ To add CSPICE validation for a new SPK/CK type:
 4. Use `CspiceKernels` helper for kernel management
 5. Compare against CSPICE using established tolerances
 
-See `docs/TYPE_SUPPORT.md` for full type support documentation.
+See `docs/SPK_CK_TYPE_SUPPORT.md` for full type support documentation.

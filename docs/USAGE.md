@@ -59,6 +59,80 @@ respice mission.hdf5 -o restored/
 respice mission.parquet -o restored/
 ```
 
+### brief
+
+Display time coverage summaries for SPICE kernel files (similar to NAIF's `brief`).
+
+```
+brief [OPTIONS] <FILES>...
+
+ARGUMENTS:
+  <FILES>...  One or more SPK/CK/BPCK files (or serialized formats)
+
+OPTIONS:
+  -t, --tabular      Tabular format (body | start | end)
+  -c, --centers      Show centers-of-motion (SPK) or base frames (BPCK)
+  -a, --all          Combine all files into a single summary
+  -n, --numeric      Show numeric IDs only (no name lookup)
+  -s, --sort-time    Sort tabular output by start time (requires -t)
+  -g, --group        Group by identical coverage
+  -y, --types        Show segment data types
+      --rel          Show reference frame column (CK files)
+      --et           Calendar ET format (default)
+      --utc          Calendar UTC format (requires leap second data)
+      --utc-doy      UTC day-of-year format (requires leap second data)
+      --et-sec       ET seconds past J2000
+  -h, --help         Print help
+  -V, --version      Print version
+```
+
+**Examples:**
+
+```bash
+# Default summary
+brief de440s.bsp
+
+# Tabular output with UTC times and centers
+brief -t --utc -c mission.bsp
+
+# Combine files, group identical coverage, show types
+brief -a -g -y de440s.bsp attitude.bc
+
+# Numeric IDs only, sorted by time
+brief -t -n -s mission.bsp
+```
+
+### inspector
+
+Interactive TUI for browsing SPICE kernel file contents.
+
+```
+inspector [FILES]...
+
+ARGUMENTS:
+  [FILES]...  One or more kernel files to inspect
+```
+
+**Keyboard Controls:**
+
+| Key | Action |
+|-----|--------|
+| `q` / `Esc` | Quit |
+| `?` | Show help overlay |
+| `Tab` | Switch between Tree and Detail panes |
+| `↑`/`↓` or `k`/`j` | Navigate up/down |
+| `←`/`→` or `h`/`l` | Collapse/expand (tree) or switch section (detail) |
+| `Enter` / `Space` | Toggle expand/collapse |
+| `1` / `2` / `3` | Overview / Segments / Comments |
+| `[` / `]` | Previous / next file tab |
+| `PgUp` / `PgDn` | Scroll detail pane by 10 lines |
+
+**Example:**
+
+```bash
+inspector de440s.bsp mission.bc earth_latest_high_prec.bpc
+```
+
 ## Rust Library
 
 ### Getting Started

@@ -16,13 +16,11 @@ SPICE kernels are the standard format for distributing this data across the spac
 
 ## Why muad-dib?
 
-SPICE binary data is trapped in DAF (Double precision Array File), a Fortran-era binary format designed in the 1980s. While robust, these files are:
+Navigators need spice. Space engineers need SPICE data. But SPICE binary data is locked inside DAF (Double precision Array File), a Fortran-era format from the 1980s that demands specialized CSPICE libraries just to read. Your data science tools can't touch it. Your pipelines can't ingest it. Your notebooks can't see it.
 
-- **Opaque**: Requires specialized CSPICE libraries to read
-- **Monolithic**: Difficult to query or transform with modern tools
-- **Inaccessible**: No native support in Python/Pandas, Julia, R, or data science ecosystems
+muad-dib *liberates* that data. It extracts ephemeris, pointing, and planetary constants from DAF files and writes them into formats you already know—Parquet, Arrow, HDF5—so you can work with SPICE data using the tools you already use: pandas, DuckDB, Julia, MATLAB, or anything that reads columnar data.
 
-muad-dib extracts the valuable spice data within and converts it to formats that work everywhere. The spice must flow—into your data pipelines, your notebooks, your experiments.
+Once the data is free, you can build on it. The [`understated`](https://github.com/VisVivaSpace/understated) crate is one example: it takes the kernels muad-dib parses and provides interpolation and state computation on top. Free the spice, and the rest follows.
 
 ## Features
 
@@ -76,6 +74,40 @@ despice input.bsp --format arrow -o output.arrow
 ```bash
 respice output.hdf5 -o restored/
 ```
+
+## CLI Tools
+
+muad-dib ships four binaries: `despice` and `respice` for format conversion (shown above), plus two discovery tools:
+
+### brief — Coverage Summary
+
+Summarize the time coverage of bodies and frames in SPICE kernel files, similar to NAIF's `brief` utility.
+
+```bash
+# Default summary
+brief de440s.bsp
+
+# Tabular output with UTC times
+brief -t --utc de440s.bsp
+
+# Show centers-of-motion, group identical coverage
+brief -t -c -g mission.bsp
+
+# Combine multiple files, show segment types
+brief -a -y mission.bsp attitude.bc
+```
+
+Key flags: `-t` (tabular), `-c` (centers), `-a` (all files combined), `-n` (numeric IDs only), `-g` (group by coverage), `-y` (show segment types), `-s` (sort by time). Time formats: `--et` (default), `--utc`, `--utc-doy`, `--et-sec`.
+
+### inspector — Interactive TUI
+
+Browse kernel contents interactively with a tree view and detail panes.
+
+```bash
+inspector de440s.bsp
+```
+
+Controls: arrow keys or `hjkl` (vim-style), `Tab` to switch panes, `1`/`2`/`3` for Overview/Segments/Comments, `[`/`]` for file tabs, `?` for help.
 
 ## Library API
 
