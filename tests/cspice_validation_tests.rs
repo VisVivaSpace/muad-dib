@@ -11,6 +11,7 @@
 
 #![cfg(all(feature = "cspice", feature = "test-data"))]
 
+use muad_dib::types::NaifId;
 use muad_dib::{DAFFile, DAFSegment};
 use std::ffi::{CStr, CString};
 use std::fs::File;
@@ -429,17 +430,17 @@ fn validate_segment_summaries_match_cspice() {
         // ic[0] = target_id, ic[1] = center_id, ic[2] = frame_id,
         // ic[3] = spk_type, ic[4] = data_start, ic[5] = data_end
         assert_eq!(
-            spk.target_code, cspice_sum.ic[0],
+            spk.target_code, NaifId(cspice_sum.ic[0]),
             "Segment {}: target_code mismatch: despice={}, cspice={}",
             i, spk.target_code, cspice_sum.ic[0]
         );
         assert_eq!(
-            spk.center_code, cspice_sum.ic[1],
+            spk.center_code, NaifId(cspice_sum.ic[1]),
             "Segment {}: center_code mismatch: despice={}, cspice={}",
             i, spk.center_code, cspice_sum.ic[1]
         );
         assert_eq!(
-            spk.frame_code, cspice_sum.ic[2],
+            spk.frame_code, NaifId(cspice_sum.ic[2]),
             "Segment {}: frame_code mismatch: despice={}, cspice={}",
             i, spk.frame_code, cspice_sum.ic[2]
         );
@@ -604,17 +605,17 @@ fn validate_de440s_segment_summaries() {
             i
         );
         assert_eq!(
-            spk.target_code, cspice_sum.ic[0],
+            spk.target_code, NaifId(cspice_sum.ic[0]),
             "de440s segment {}: target_code",
             i
         );
         assert_eq!(
-            spk.center_code, cspice_sum.ic[1],
+            spk.center_code, NaifId(cspice_sum.ic[1]),
             "de440s segment {}: center_code",
             i
         );
         assert_eq!(
-            spk.frame_code, cspice_sum.ic[2],
+            spk.frame_code, NaifId(cspice_sum.ic[2]),
             "de440s segment {}: frame_code",
             i
         );
@@ -758,12 +759,12 @@ fn validate_ck_segment_summaries() {
 
         // CK summary: ic[0]=instrument, ic[1]=frame, ic[2]=ck_type, ic[3]=rates, ic[4]=start, ic[5]=end
         assert_eq!(
-            ck.instrument_code, cspice_sum.ic[0],
+            ck.instrument_code, NaifId(cspice_sum.ic[0]),
             "CK segment {}: instrument_code",
             i
         );
         assert_eq!(
-            ck.frame_code, cspice_sum.ic[1],
+            ck.frame_code, NaifId(cspice_sum.ic[1]),
             "CK segment {}: frame_code",
             i
         );
@@ -894,12 +895,12 @@ fn validate_bpc_segment_summaries() {
 
         // BPC summary: ic[0]=frame_id, ic[1]=base_frame, ic[2]=bpck_type, ic[3]=start, ic[4]=end
         assert_eq!(
-            bpck.frame_id, cspice_sum.ic[0],
+            bpck.frame_id, NaifId(cspice_sum.ic[0]),
             "BPC segment {}: frame_id",
             i
         );
         assert_eq!(
-            bpck.base_frame, cspice_sum.ic[1],
+            bpck.base_frame, NaifId(cspice_sum.ic[1]),
             "BPC segment {}: base_frame",
             i
         );
