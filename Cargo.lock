@@ -1552,7 +1552,7 @@ dependencies = [
 
 [[package]]
 name = "muad-dib"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anise",
  "arrow",
