@@ -12,6 +12,7 @@ use muad_dib::formats::parquet::read_parquet;
 use muad_dib::hdf5_input::read_hdf5;
 #[cfg(feature = "hdf5")]
 use muad_dib::hdf5_output::write_hdf5;
+#[cfg(feature = "hdf5")]
 use muad_dib::spk_writer::write_spk;
 use muad_dib::{DAFFile, DAFSegment};
 use std::fs::File;
