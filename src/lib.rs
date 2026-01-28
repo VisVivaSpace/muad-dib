@@ -164,11 +164,23 @@ impl DafReader {
         // DAF addresses are 1-indexed double-word (8-byte) indices
         // daf_addr2 is inclusive, so we have (daf_addr2 - daf_addr1 + 1) elements
         let num_elements = (daf_addr2 - daf_addr1 + 1) as usize;
+        let byte_offset = (daf_addr1 - 1) * 8;
+        let num_bytes = num_elements * 8;
+
+        // Bulk read: single seek + single read for all elements
+        let mut f = &self.file;
+        f.seek(SeekFrom::Start(byte_offset))?;
+        let mut buf = vec![0u8; num_bytes];
+        f.read_exact(&mut buf)?;
+
         let mut vectr = Vec::with_capacity(num_elements);
-        for daf_addr in daf_addr1..=daf_addr2 {
-            // Convert DAF address to byte offset: (N-1) * 8
-            let byte_offset = (daf_addr - 1) * 8;
-            vectr.push(self.read_f64(byte_offset)?);
+        let convert: fn([u8; 8]) -> f64 = match self.endian {
+            Endian::Little => f64::from_le_bytes,
+            Endian::Big => f64::from_be_bytes,
+        };
+        for chunk in buf.chunks_exact(8) {
+            let bytes: [u8; 8] = chunk.try_into().unwrap();
+            vectr.push(convert(bytes));
         }
         Ok(vectr)
     }
