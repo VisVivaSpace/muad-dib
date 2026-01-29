@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.1] - 2026-01-28
+
+### Performance
+
+- Bulk read f64 array with single seek instead of per-element seeks.
+
+### Fixed
+
+- Gate `write_spk` import behind `hdf5` feature to silence unused import warning.
+
 ## [0.3.0] - 2026-01-27
 
 ### Breaking Changes
